@@ -2,56 +2,31 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-
-const healthHistory = [
-  {
-    id: 1,
-    event: "Diagnosed with Hypertension",
-    date: "Jan 15, 2024",
-    doctor: "Dr. Sarah Johnson",
-    status: "ongoing",
-  },
-  {
-    id: 2,
-    event: "Appendix Surgery",
-    date: "Jun 20, 2023",
-    doctor: "Dr. James Wilson",
-    status: "completed",
-  },
-  {
-    id: 3,
-    event: "Flu Vaccination",
-    date: "Oct 10, 2024",
-    doctor: "Health Clinic",
-    status: "completed",
-  },
-  {
-    id: 4,
-    event: "COVID-19 Vaccination (Booster)",
-    date: "Mar 5, 2024",
-    doctor: "Health Clinic",
-    status: "completed",
-  },
-  {
-    id: 5,
-    event: "Allergy to Penicillin Confirmed",
-    date: "Aug 30, 2023",
-    doctor: "Dr. Emily Rodriguez",
-    status: "ongoing",
-  },
-]
-
-const conditions = [
-  { name: "Hypertension", since: "Jan 2024", severity: "mild" },
-  { name: "Seasonal Allergies", since: "Recurring", severity: "mild" },
-]
-
-const allergies = [
-  { name: "Penicillin", severity: "severe", reaction: "Rash" },
-  { name: "Shellfish", severity: "moderate", reaction: "Itching" },
-]
+import { useEffect, useState } from "react"
 
 export function HealthHistory() {
+  const [loading, setLoading] = useState(true)
+  const [conditions, setConditions] = useState<Array<{ name: string; since: string; severity: string }>>([])
+  const [allergies, setAllergies] = useState<Array<{ name: string; severity: string; reaction: string }>>([])
+  const [history, setHistory] = useState<Array<{ id: string; event: string; date: string; doctor: string; status: string }>>([])
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      try {
+        const res = await fetch("/api/medical-records/history")
+        if (res.ok) {
+          const data = await res.json()
+          setConditions(data.conditions || [])
+          setAllergies(data.allergies || [])
+          setHistory(data.history || [])
+        }
+      } catch {}
+      setLoading(false)
+    }
+    load()
+  }, [])
+
   return (
     <div className="space-y-6">
       {/* Current Conditions */}
@@ -61,7 +36,7 @@ export function HealthHistory() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {conditions.map((condition, idx) => (
+            {(loading ? [] : conditions).map((condition, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                 <div>
                   <div className="font-semibold text-foreground">{condition.name}</div>
@@ -79,6 +54,9 @@ export function HealthHistory() {
                 </Badge>
               </div>
             ))}
+            {!loading && conditions.length === 0 && (
+              <div className="text-sm text-muted-foreground">No conditions found.</div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -90,7 +68,7 @@ export function HealthHistory() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {allergies.map((allergy, idx) => (
+            {(loading ? [] : allergies).map((allergy, idx) => (
               <div
                 key={idx}
                 className="flex items-center justify-between p-3 rounded-lg bg-accent-red/5 border border-accent-red/20"
@@ -111,6 +89,9 @@ export function HealthHistory() {
                 </Badge>
               </div>
             ))}
+            {!loading && allergies.length === 0 && (
+              <div className="text-sm text-muted-foreground">No allergies found.</div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -122,11 +103,11 @@ export function HealthHistory() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {healthHistory.map((event, idx) => (
+            {(loading ? [] : history).map((event, idx) => (
               <div key={event.id} className="flex gap-4">
                 <div className="flex flex-col items-center">
                   <div className="w-3 h-3 rounded-full bg-primary mt-2" />
-                  {idx !== healthHistory.length - 1 && <div className="w-0.5 h-12 bg-border mt-2" />}
+                  {idx !== history.length - 1 && <div className="w-0.5 h-12 bg-border mt-2" />}
                 </div>
                 <div className="pb-4">
                   <div className="font-semibold text-foreground">{event.event}</div>
@@ -147,6 +128,9 @@ export function HealthHistory() {
                 </div>
               </div>
             ))}
+            {!loading && history.length === 0 && (
+              <div className="text-sm text-muted-foreground">No history events found.</div>
+            )}
           </div>
         </CardContent>
       </Card>

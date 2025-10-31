@@ -4,54 +4,41 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { FileText, Download, Trash2, Eye } from "lucide-react"
-
-const records = [
-  {
-    id: 1,
-    title: "Prescription - Aspirin",
-    date: "Oct 28, 2025",
-    doctor: "Dr. Sarah Johnson",
-    type: "Prescription",
-    size: "245 KB",
-  },
-  {
-    id: 2,
-    title: "Blood Test Results",
-    date: "Oct 20, 2025",
-    doctor: "Lab Center",
-    type: "Lab Report",
-    size: "512 KB",
-  },
-  {
-    id: 3,
-    title: "X-Ray Report - Chest",
-    date: "Oct 15, 2025",
-    doctor: "Imaging Center",
-    type: "Imaging",
-    size: "1.2 MB",
-  },
-  {
-    id: 4,
-    title: "Vaccination Certificate",
-    date: "Sep 10, 2025",
-    doctor: "Health Clinic",
-    type: "Certificate",
-    size: "180 KB",
-  },
-  {
-    id: 5,
-    title: "Allergy Test Results",
-    date: "Aug 30, 2025",
-    doctor: "Dr. Emily Rodriguez",
-    type: "Lab Report",
-    size: "420 KB",
-  },
-]
+import { useEffect, useState } from "react"
 
 export function RecordsList() {
+  const [loading, setLoading] = useState(true)
+  const [records, setRecords] = useState<Array<{ id: string; title: string; date: string; doctor: string; type: string; size: string }>>([])
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/medical-records/records")
+      if (res.ok) setRecords(await res.json())
+    } catch {}
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const deleteRecord = async (id: string) => {
+    try {
+      const res = await fetch(`/api/medical-records/records/${id}`, { method: "DELETE" })
+      if (res.ok) {
+        setRecords((prev) => prev.filter((r) => r.id !== id))
+      } else {
+        alert("Delete failed")
+      }
+    } catch {
+      alert("Network error")
+    }
+  }
+
   return (
     <div className="space-y-3">
-      {records.map((record) => (
+      {(loading ? [] : records).map((record) => (
         <Card key={record.id} className="hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between gap-4">
@@ -73,13 +60,19 @@ export function RecordsList() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="hover:bg-primary/10">
+                <Button variant="ghost" size="icon" className="hover:bg-primary/10" title="View">
                   <Eye className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="hover:bg-primary/10">
+                <Button variant="ghost" size="icon" className="hover:bg-primary/10" title="Download">
                   <Download className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="hover:bg-accent-red/10 text-accent-red">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hover:bg-accent-red/10 text-accent-red"
+                  onClick={() => deleteRecord(record.id)}
+                  title="Delete"
+                >
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
@@ -87,6 +80,9 @@ export function RecordsList() {
           </CardContent>
         </Card>
       ))}
+      {!loading && records.length === 0 && (
+        <div className="text-sm text-muted-foreground">No records found.</div>
+      )}
     </div>
   )
 }

@@ -19,11 +19,35 @@ export function AddMedicineForm({ onClose }: AddMedicineFormProps) {
     time: "08:00",
     reason: "",
   })
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    onClose()
+    if (!formData.medicine || !formData.dosage || !formData.time) return
+    setSubmitting(true)
+    try {
+      const res = await fetch("/api/reminders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          medicine: formData.medicine,
+          dosage: formData.dosage,
+          frequency: formData.frequency,
+          time: formData.time,
+          reason: formData.reason,
+        }),
+      })
+      if (res.ok) {
+        window.dispatchEvent(new Event("reminders:refresh"))
+        onClose()
+      } else {
+        alert("Failed to add reminder")
+      }
+    } catch {
+      alert("Network error")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -99,11 +123,11 @@ export function AddMedicineForm({ onClose }: AddMedicineFormProps) {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1 bg-transparent">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 bg-transparent" disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
-              Add Medicine
+            <Button type="submit" className="flex-1" disabled={submitting}>
+              {submitting ? "Adding..." : "Add Medicine"}
             </Button>
           </div>
         </form>

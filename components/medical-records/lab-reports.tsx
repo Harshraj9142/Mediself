@@ -3,70 +3,33 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { TrendingUp, TrendingDown } from "lucide-react"
-
-const labReports = [
-  {
-    id: 1,
-    test: "Blood Glucose",
-    value: "95",
-    unit: "mg/dL",
-    normalRange: "70-100",
-    status: "normal",
-    date: "Oct 20, 2025",
-    trend: "stable",
-  },
-  {
-    id: 2,
-    test: "Cholesterol (Total)",
-    value: "185",
-    unit: "mg/dL",
-    normalRange: "<200",
-    status: "normal",
-    date: "Oct 20, 2025",
-    trend: "down",
-  },
-  {
-    id: 3,
-    test: "HDL Cholesterol",
-    value: "52",
-    unit: "mg/dL",
-    normalRange: ">40",
-    status: "normal",
-    date: "Oct 20, 2025",
-    trend: "up",
-  },
-  {
-    id: 4,
-    test: "LDL Cholesterol",
-    value: "115",
-    unit: "mg/dL",
-    normalRange: "<130",
-    status: "normal",
-    date: "Oct 20, 2025",
-    trend: "stable",
-  },
-  {
-    id: 5,
-    test: "Triglycerides",
-    value: "125",
-    unit: "mg/dL",
-    normalRange: "<150",
-    status: "normal",
-    date: "Oct 20, 2025",
-    trend: "down",
-  },
-]
+import { useEffect, useState } from "react"
 
 export function LabReports() {
+  const [loading, setLoading] = useState(true)
+  const [reports, setReports] = useState<Array<{ id: string; test: string; value: string; unit: string; normalRange: string; status: string; date: string; trend: string }>>([])
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      try {
+        const res = await fetch("/api/medical-records/labs")
+        if (res.ok) setReports(await res.json())
+      } catch {}
+      setLoading(false)
+    }
+    load()
+  }, [])
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Latest Lab Results - Oct 20, 2025</CardTitle>
+          <CardTitle className="text-lg">Latest Lab Results</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {labReports.map((report) => (
+            {(loading ? [] : reports).map((report) => (
               <div
                 key={report.id}
                 className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
@@ -103,6 +66,9 @@ export function LabReports() {
                 </div>
               </div>
             ))}
+            {!loading && reports.length === 0 && (
+              <div className="text-sm text-muted-foreground">No lab reports found.</div>
+            )}
           </div>
         </CardContent>
       </Card>
