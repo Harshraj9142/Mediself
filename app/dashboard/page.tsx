@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { TrendingUp, Calendar, Pill, FileText } from "lucide-react"
+import { useEffect, useState } from "react"
 
 const bpData = [
   { time: "Mon", systolic: 120, diastolic: 80 },
@@ -25,6 +26,33 @@ const heartRateData = [
 ]
 
 export default function PatientDashboard() {
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<{ upcomingAppointments: number; activeReminders: number; recentReports: number; healthScore: number }>({
+    upcomingAppointments: 0,
+    activeReminders: 0,
+    recentReports: 0,
+    healthScore: 85,
+  })
+  const [recentActivity, setRecentActivity] = useState<Array<{ type: string; desc: string; time: string }>>([])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch("/api/dashboard/patient")
+        if (res.ok) {
+          const data = await res.json()
+          setStats(data.stats)
+          setRecentActivity(data.recentActivity)
+        }
+      } catch (e) {
+        // noop
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
   return (
     <div className="p-6 space-y-6">
       {/* Quick Stats */}
@@ -34,7 +62,7 @@ export default function PatientDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Upcoming Appointments</p>
-                <p className="text-3xl font-bold text-blue-600">3</p>
+                <p className="text-3xl font-bold text-blue-600">{loading ? "-" : stats.upcomingAppointments}</p>
               </div>
               <Calendar className="w-10 h-10 text-blue-500 opacity-50" />
             </div>
@@ -46,7 +74,7 @@ export default function PatientDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Active Reminders</p>
-                <p className="text-3xl font-bold text-green-600">5</p>
+                <p className="text-3xl font-bold text-green-600">{loading ? "-" : stats.activeReminders}</p>
               </div>
               <Pill className="w-10 h-10 text-green-500 opacity-50" />
             </div>
@@ -58,7 +86,7 @@ export default function PatientDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Recent Reports</p>
-                <p className="text-3xl font-bold text-orange-600">8</p>
+                <p className="text-3xl font-bold text-orange-600">{loading ? "-" : stats.recentReports}</p>
               </div>
               <FileText className="w-10 h-10 text-orange-500 opacity-50" />
             </div>
@@ -70,7 +98,7 @@ export default function PatientDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Health Score</p>
-                <p className="text-3xl font-bold text-green-600">85%</p>
+                <p className="text-3xl font-bold text-green-600">{loading ? "-" : `${stats.healthScore}%`}</p>
               </div>
               <TrendingUp className="w-10 h-10 text-green-500 opacity-50" />
             </div>
@@ -123,11 +151,7 @@ export default function PatientDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[
-              { type: "Appointment", desc: "Scheduled with Dr. Smith", time: "2 hours ago" },
-              { type: "Report", desc: "Blood test results uploaded", time: "1 day ago" },
-              { type: "Reminder", desc: "Took morning medication", time: "3 hours ago" },
-            ].map((activity, i) => (
+            {(loading ? [] : recentActivity).map((activity, i) => (
               <div key={i} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
                 <div>
                   <p className="font-semibold text-foreground">{activity.type}</p>
@@ -136,6 +160,9 @@ export default function PatientDashboard() {
                 <span className="text-xs text-muted-foreground">{activity.time}</span>
               </div>
             ))}
+            {!loading && recentActivity.length === 0 && (
+              <div className="text-sm text-muted-foreground">No recent activity.</div>
+            )}
           </div>
         </CardContent>
       </Card>

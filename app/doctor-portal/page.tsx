@@ -3,8 +3,80 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Users, Calendar, CheckCircle, Clock } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Input } from "@/components/ui/input"
 
 export default function DoctorDashboard() {
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<{ totalPatients: number; todaysAppointments: number; completed: number; pending: number }>({
+    totalPatients: 0,
+    todaysAppointments: 0,
+    completed: 0,
+    pending: 0,
+  })
+  const [todayList, setTodayList] = useState<Array<{ time: string; patient: string; reason: string; status: string }>>([])
+  const [requests, setRequests] = useState<Array<{ patient: string; request: string; date: string; id?: string }>>([])
+  const [patients, setPatients] = useState<Array<{ id: string; name: string; email: string; lastVisitAt: string | null; conditions: string[] }>>([])
+  const [patientsLoading, setPatientsLoading] = useState(true)
+  const [patientSearch, setPatientSearch] = useState("")
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch("/api/dashboard/doctor")
+        if (res.ok) {
+          const data = await res.json()
+          setStats(data.stats)
+          setTodayList(data.todayList)
+          setRequests(data.requests)
+        }
+      } catch {}
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  const loadPatients = async (search?: string) => {
+    setPatientsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (search) params.set("search", search)
+      const res = await fetch(`/api/doctor/patients?${params.toString()}`)
+      if (res.ok) {
+        const data = await res.json()
+        setPatients(
+          (data.items || []).map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            email: p.email,
+            lastVisitAt: p.lastVisitAt ? new Date(p.lastVisitAt).toLocaleDateString() : null,
+            conditions: Array.isArray(p.conditions) ? p.conditions : [],
+          }))
+        )
+      }
+    } catch {}
+    setPatientsLoading(false)
+  }
+
+  useEffect(() => {
+    loadPatients()
+  }, [])
+
+  const actOnRequest = async (id: string, action: "approve" | "decline") => {
+    try {
+      const res = await fetch(`/api/doctor/requests/${id}/${action}`, { method: "POST" })
+      if (res.ok) {
+        // refresh requests
+        const r = await fetch("/api/doctor/requests")
+        if (r.ok) setRequests(await r.json())
+      } else {
+        alert("Action failed")
+      }
+    } catch {
+      alert("Network error")
+    }
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Quick Stats */}
@@ -14,7 +86,7 @@ export default function DoctorDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Patients</p>
-                <p className="text-3xl font-bold text-blue-600">24</p>
+                <p className="text-3xl font-bold text-blue-600">{loading ? "-" : stats.totalPatients}</p>
               </div>
               <Users className="w-10 h-10 text-blue-500 opacity-50" />
             </div>
@@ -26,7 +98,7 @@ export default function DoctorDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Today's Appointments</p>
-                <p className="text-3xl font-bold text-green-600">6</p>
+                <p className="text-3xl font-bold text-green-600">{loading ? "-" : stats.todaysAppointments}</p>
               </div>
               <Calendar className="w-10 h-10 text-green-500 opacity-50" />
             </div>
@@ -38,7 +110,7 @@ export default function DoctorDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-3xl font-bold text-green-600">18</p>
+                <p className="text-3xl font-bold text-green-600">{loading ? "-" : stats.completed}</p>
               </div>
               <CheckCircle className="w-10 h-10 text-green-500 opacity-50" />
             </div>
@@ -50,7 +122,7 @@ export default function DoctorDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-3xl font-bold text-orange-600">3</p>
+                <p className="text-3xl font-bold text-orange-600">{loading ? "-" : stats.pending}</p>
               </div>
               <Clock className="w-10 h-10 text-orange-500 opacity-50" />
             </div>
@@ -65,12 +137,7 @@ export default function DoctorDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              { time: "09:00 AM", patient: "John Doe", reason: "Regular Checkup", status: "Completed" },
-              { time: "10:30 AM", patient: "Jane Smith", reason: "Follow-up", status: "In Progress" },
-              { time: "02:00 PM", patient: "Mike Johnson", reason: "Consultation", status: "Pending" },
-              { time: "03:30 PM", patient: "Sarah Williams", reason: "Lab Review", status: "Pending" },
-            ].map((apt, i) => (
+            {(loading ? [] : todayList).map((apt, i) => (
               <div
                 key={i}
                 className="flex items-center justify-between p-4 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
@@ -95,6 +162,9 @@ export default function DoctorDashboard() {
                 </div>
               </div>
             ))}
+            {!loading && todayList.length === 0 && (
+              <div className="text-sm text-muted-foreground">No appointments for today.</div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -106,26 +176,67 @@ export default function DoctorDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              { patient: "Alice Brown", request: "Prescription Refill", date: "2 hours ago" },
-              { patient: "Bob Wilson", request: "Report Review", date: "4 hours ago" },
-              { patient: "Carol Davis", request: "Appointment Reschedule", date: "1 day ago" },
-            ].map((req, i) => (
+            {(loading ? [] : requests).map((req: any, i) => (
               <div key={i} className="flex items-center justify-between p-4 bg-secondary rounded-lg">
                 <div>
                   <p className="font-semibold text-foreground">{req.patient}</p>
                   <p className="text-sm text-muted-foreground">{req.request}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline">
+                  <Button size="sm" variant="outline" onClick={() => req.id && actOnRequest(req.id, "decline")}>
                     Decline
                   </Button>
-                  <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => req.id && actOnRequest(req.id, "approve")}>
                     Approve
                   </Button>
                 </div>
               </div>
             ))}
+            {!loading && requests.length === 0 && (
+              <div className="text-sm text-muted-foreground">No requests.</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Patients Roster */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Patients</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 mb-4">
+            <Input
+              placeholder="Search patients by name or email"
+              value={patientSearch}
+              onChange={(e) => setPatientSearch(e.target.value)}
+            />
+            <Button onClick={() => loadPatients(patientSearch)}>Search</Button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-muted-foreground">
+                  <th className="py-2">Name</th>
+                  <th className="py-2">Email</th>
+                  <th className="py-2">Last Visit</th>
+                  <th className="py-2">Conditions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(patientsLoading ? [] : patients).map((p) => (
+                  <tr key={p.id} className="border-t border-border">
+                    <td className="py-2 font-medium text-foreground">{p.name}</td>
+                    <td className="py-2">{p.email}</td>
+                    <td className="py-2">{p.lastVisitAt || "-"}</td>
+                    <td className="py-2">{p.conditions.join(", ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!patientsLoading && patients.length === 0 && (
+              <div className="text-sm text-muted-foreground mt-2">No patients found.</div>
+            )}
           </div>
         </CardContent>
       </Card>
