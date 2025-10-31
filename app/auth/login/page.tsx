@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Logo } from "@/components/logo"
 import { Mail, Lock, Eye, EyeOff } from "lucide-react"
+import { signIn } from "next-auth/react"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -25,14 +26,21 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    // Simulate login
-    setTimeout(() => {
-      if (userType === "patient") {
-        router.push("/dashboard")
-      } else {
-        router.push("/doctor-portal")
-      }
-    }, 1000)
+    const res = await signIn("credentials", {
+      redirect: false,
+      email: formData.email,
+      password: formData.password,
+    })
+    setIsLoading(false)
+    if (!res || res.error) {
+      alert("Invalid email or password")
+      return
+    }
+    if (userType === "patient") {
+      router.push("/dashboard")
+    } else {
+      router.push("/doctor-portal")
+    }
   }
 
   return (

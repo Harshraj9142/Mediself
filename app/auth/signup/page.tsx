@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Logo } from "@/components/logo"
 import { User, Mail, Lock, Eye, EyeOff, CheckCircle } from "lucide-react"
+import { signIn } from "next-auth/react"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -47,13 +48,42 @@ export default function SignupPage() {
       return
     }
     setIsLoading(true)
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: userType,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data?.error || "Signup failed")
+        setIsLoading(false)
+        return
+      }
+      const login = await signIn("credentials", {
+        redirect: false,
+        email: formData.email,
+        password: formData.password,
+      })
+      setIsLoading(false)
+      if (!login || login.error) {
+        alert("Account created, but sign in failed. Please try logging in.")
+        return
+      }
       if (userType === "patient") {
         router.push("/dashboard")
       } else {
         router.push("/doctor-portal")
       }
-    }, 1000)
+    } catch (err) {
+      setIsLoading(false)
+      alert("Something went wrong. Please try again.")
+    }
   }
 
   return (

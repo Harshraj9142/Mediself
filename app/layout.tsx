@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Navbar } from "@/components/navbar"
 import { AIChatbot } from "@/components/ai-chatbot"
 import { Footer } from "@/components/footer"
+import { AuthSessionProvider } from "@/components/auth-session-provider"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -30,12 +31,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.className} font-sans antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <Navbar />
-          <main className="min-h-screen">{children}</main>
-          <Footer />
-          <AIChatbot />
-        </ThemeProvider>
+        <AuthSessionProvider>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+            <Navbar />
+            <main className="min-h-screen">{children}</main>
+            <Footer />
+            <AIChatbot />
+          </ThemeProvider>
+        </AuthSessionProvider>
         <Analytics />
       </body>
     </html>
