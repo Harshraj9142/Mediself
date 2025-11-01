@@ -22,38 +22,65 @@ export async function GET(req: Request) {
     const client = (await clientPromise) as MongoClient
     const db = client.db(process.env.MONGODB_DB)
 
-    const relations = db.collection("doctor_patients")
     const users = db.collection("users")
+    const relations = db.collection("doctor_patients")
+    const profiles = db.collection("patient_profiles")
 
-    const relCursor = relations.find({ doctorId: new ObjectId(doctorId) })
-    const total = await relCursor.count().catch(() => 0)
-    const rels = await relCursor.skip(skip).limit(limit).toArray()
+    // Build search query for all patients
+    const searchQuery: any = { role: "patient" }
+    if (search) {
+      searchQuery.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ]
+    }
 
-    const patientIds = rels.map((r: any) => r.patientId).filter(Boolean)
-    const details = patientIds.length
-      ? await users
-          .find({ _id: { $in: patientIds.map((id: any) => (typeof id === "string" ? new ObjectId(id) : id)) } })
-          .project({ name: 1, email: 1 })
-          .toArray()
-      : []
+    // Get total count of all patients matching search
+    const total = await users.countDocuments(searchQuery)
 
-    const byId = new Map<string, any>()
-    details.forEach((d: any) => byId.set(String(d._id), d))
+    // Get paginated list of all patients
+    const allPatients = await users
+      .find(searchQuery)
+      .project({ name: 1, email: 1, createdAt: 1 })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray()
 
-    let items = rels.map((r: any) => {
-      const info = byId.get(String(r.patientId)) || {}
+    // Get relationship data for this doctor with these patients
+    const patientIds = allPatients.map((p: any) => p._id)
+    const relationsByPatient = new Map<string, any>()
+    if (patientIds.length > 0) {
+      const rels = await relations
+        .find({ doctorId: new ObjectId(doctorId), patientId: { $in: patientIds } })
+        .toArray()
+      rels.forEach((r: any) => relationsByPatient.set(String(r.patientId), r))
+    }
+
+    // Get profile data for conditions
+    const profilesByPatient = new Map<string, any>()
+    if (patientIds.length > 0) {
+      const patientProfiles = await profiles
+        .find({ userId: { $in: patientIds } })
+        .toArray()
+      patientProfiles.forEach((p: any) => profilesByPatient.set(String(p.userId), p))
+    }
+
+    // Build response items
+    const items = allPatients.map((patient: any) => {
+      const patientId = String(patient._id)
+      const relation = relationsByPatient.get(patientId)
+      const profile = profilesByPatient.get(patientId)
+
       return {
-        id: String(r.patientId || r._id),
-        name: r.patientName || info.name || "Patient",
-        email: info.email || "",
-        lastVisitAt: r.lastVisitAt || null,
-        conditions: r.conditions || [],
+        id: patientId,
+        name: patient.name || patient.email || "Patient",
+        email: patient.email || "",
+        lastVisitAt: relation?.lastVisitAt || null,
+        conditions: relation?.conditions || profile?.conditions || [],
+        hasRelation: !!relation,
       }
     })
-
-    if (search) {
-      items = items.filter((p) => p.name.toLowerCase().includes(search) || p.email.toLowerCase().includes(search))
-    }
 
     return NextResponse.json({ page, limit, total, items })
   } catch (e) {

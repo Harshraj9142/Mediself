@@ -15,13 +15,18 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const search = (searchParams.get("search") || "").trim().toLowerCase()
   const day = searchParams.get("day") // optional ISO date filter
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)))
+  const skip = (page - 1) * limit
 
   try {
     const client = (await clientPromise) as MongoClient
     const db = client.db(process.env.MONGODB_DB)
-    const col = db.collection("appointments")
+    const appointments = db.collection("appointments")
+    const users = db.collection("users")
 
-    const query: any = { doctorId: new ObjectId(doctorId) }
+    // Build query for ALL appointments
+    const query: any = {}
     if (day) {
       const d = new Date(day)
       const start = new Date(d)
@@ -31,28 +36,65 @@ export async function GET(req: Request) {
       query.date = { $gte: start, $lte: end }
     }
 
-    let list = await col.find(query).sort({ date: 1 }).limit(300).toArray()
+    // Add search filter if provided
+    if (search) {
+      query.$or = [
+        { patientName: { $regex: search, $options: "i" } },
+        { doctorName: { $regex: search, $options: "i" } },
+        { reason: { $regex: search, $options: "i" } },
+        { status: { $regex: search, $options: "i" } },
+      ]
+    }
 
-    const mapped = list.map((a: any) => ({
-      id: String(a._id),
-      patient: a.patientName || String(a.patientId || "Patient"),
-      date: new Date(a.date).toLocaleDateString(),
-      time: new Date(a.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      reason: a.reason || "Consultation",
-      status: a.status || "Pending",
-    }))
+    // Get total count
+    const total = await appointments.countDocuments(query)
 
-    const filtered = search
-      ? mapped.filter(
-          (x) =>
-            x.patient.toLowerCase().includes(search) ||
-            x.reason.toLowerCase().includes(search) ||
-            x.status.toLowerCase().includes(search)
-        )
-      : mapped
+    // Get paginated appointments
+    const list = await appointments
+      .find(query)
+      .sort({ date: -1 }) // Most recent first
+      .skip(skip)
+      .limit(limit)
+      .toArray()
 
-    return NextResponse.json(filtered)
+    // Get unique doctor and patient IDs for enrichment
+    const doctorIds = [...new Set(list.map((a: any) => String(a.doctorId)).filter(Boolean))].map(id => new ObjectId(id))
+    const patientIds = [...new Set(list.map((a: any) => String(a.patientId)).filter(Boolean))].map(id => new ObjectId(id))
+
+    // Fetch doctor and patient details
+    const doctors = doctorIds.length > 0 
+      ? await users.find({ _id: { $in: doctorIds } }).project({ name: 1, email: 1 }).toArray()
+      : []
+    const patients = patientIds.length > 0
+      ? await users.find({ _id: { $in: patientIds } }).project({ name: 1, email: 1 }).toArray()
+      : []
+
+    const doctorMap = new Map(doctors.map((d: any) => [String(d._id), d]))
+    const patientMap = new Map(patients.map((p: any) => [String(p._id), p]))
+
+    // Map appointments with enriched data
+    const items = list.map((a: any) => {
+      const doctor = doctorMap.get(String(a.doctorId))
+      const patient = patientMap.get(String(a.patientId))
+      const isMyAppointment = String(a.doctorId) === String(doctorId)
+
+      return {
+        id: String(a._id),
+        patient: a.patientName || patient?.name || patient?.email || "Patient",
+        patientId: String(a.patientId),
+        doctor: a.doctorName || doctor?.name || doctor?.email || "Doctor",
+        doctorId: String(a.doctorId),
+        date: new Date(a.date).toLocaleDateString(),
+        time: new Date(a.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        dateTime: a.date,
+        reason: a.reason || "Consultation",
+        status: a.status || "Pending",
+        isMyAppointment,
+      }
+    })
+
+    return NextResponse.json({ page, limit, total, items })
   } catch (e) {
-    return NextResponse.json([])
+    return NextResponse.json({ page: 1, limit: 50, total: 0, items: [] })
   }
 }

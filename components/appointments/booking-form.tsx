@@ -30,6 +30,8 @@ export function BookingForm({ selectedDate, selectedDoctor, onCancel }: BookingF
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [slots, setSlots] = useState<string[]>([])
+  const [availability, setAvailability] = useState<any>(null)
+  const [bookedSlots, setBookedSlots] = useState<string[]>([])
 
   const parseTimeToDate = (baseDate: Date, time: string) => {
     const m = time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
@@ -76,13 +78,48 @@ export function BookingForm({ selectedDate, selectedDoctor, onCancel }: BookingF
   useEffect(() => {
     const load = async () => {
       setSlots([])
+      setAvailability(null)
+      setBookedSlots([])
       if (!selectedDoctor || !selectedDate) return
       const date = selectedDate.toISOString().slice(0, 10)
       try {
-        const res = await fetch(`/api/patient/availability?doctorId=${encodeURIComponent(selectedDoctor)}&date=${encodeURIComponent(date)}`)
+        const res = await fetch(`/api/patient/doctor-availability?doctorId=${encodeURIComponent(selectedDoctor)}&date=${encodeURIComponent(date)}`)
         if (res.ok) {
           const data = await res.json()
-          setSlots(Array.isArray(data?.slots) ? data.slots : [])
+          setAvailability(data.availability)
+          setBookedSlots(data.bookedSlots || [])
+          
+          // Generate available slots based on doctor's schedule
+          const dayOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][selectedDate.getDay()]
+          const dayAvailability = data.availability?.[dayOfWeek]
+          
+          if (dayAvailability?.enabled) {
+            const startTime = dayAvailability.start || "09:00"
+            const endTime = dayAvailability.end || "17:00"
+            const slotDuration = data.slotDuration || 30
+            
+            // Generate slots
+            const [startHour, startMin] = startTime.split(":").map(Number)
+            const [endHour, endMin] = endTime.split(":").map(Number)
+            const startMinutes = startHour * 60 + startMin
+            const endMinutes = endHour * 60 + endMin
+            
+            const generatedSlots = []
+            for (let minutes = startMinutes; minutes < endMinutes; minutes += slotDuration) {
+              const hour = Math.floor(minutes / 60)
+              const min = minutes % 60
+              const timeStr = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`
+              
+              // Check if slot is not booked
+              if (!data.bookedSlots?.includes(timeStr)) {
+                // Convert to 12-hour format
+                const hour12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+                const ampm = hour >= 12 ? "PM" : "AM"
+                generatedSlots.push(`${hour12}:${String(min).padStart(2, "0")} ${ampm}`)
+              }
+            }
+            setSlots(generatedSlots)
+          }
         }
       } catch {}
     }
@@ -133,25 +170,56 @@ export function BookingForm({ selectedDate, selectedDoctor, onCancel }: BookingF
             </div>
           </div>
 
+          {/* Availability Info */}
+          {availability && selectedDate && (
+            <div className="bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20 rounded-lg p-4 border border-teal-200 dark:border-teal-800">
+              <div className="text-sm font-semibold mb-2 bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
+                ✨ Doctor's Weekly Schedule
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-xs">
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                  <div key={day} className={`text-center p-1 rounded ${
+                    availability[day]?.enabled 
+                      ? "bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300" 
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-400"
+                  }`}>
+                    {day}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Time Selection */}
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-3">Select Time Slot</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(slots.length ? slots : ["9:00 AM", "10:00 AM", "11:00 AM", "2:00 PM", "3:00 PM", "4:00 PM"]).map((time) => (
-                <button
-                  key={time}
-                  type="button"
-                  onClick={() => setSelectedTime(time)}
-                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                    selectedTime === time
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary hover:bg-secondary/80 text-foreground"
-                  }`}
-                >
-                  {time}
-                </button>
-              ))}
-            </div>
+            <label className="block text-sm font-semibold text-foreground mb-3">
+              Select Time Slot
+              {slots.length > 0 && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">({slots.length} available)</span>
+              )}
+            </label>
+            {slots.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {selectedDoctor && selectedDate ? "No available slots for this date" : "Select a doctor and date to see available slots"}
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                {slots.map((time) => (
+                  <button
+                    key={time}
+                    type="button"
+                    onClick={() => setSelectedTime(time)}
+                    className={`py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      selectedTime === time
+                        ? "bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-lg scale-105"
+                        : "bg-secondary hover:bg-teal-50 dark:hover:bg-teal-950/20 text-foreground hover:scale-105"
+                    }`}
+                  >
+                    {time}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Reason for Visit */}

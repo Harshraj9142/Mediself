@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 
-type Rx = { id: string; patient: string; medication: string; dosage: string; date: string; status: "Pending" | "Approved" | "Declined" }
+type Rx = { id: string; patient: string; patientId: string; doctor: string; doctorId: string; medication: string; dosage: string; date: string; status: "Pending" | "Approved" | "Declined"; isMyPrescription: boolean }
 
 export default function DoctorPrescriptionsPage() {
   const [loading, setLoading] = useState(true)
@@ -22,9 +22,13 @@ export default function DoctorPrescriptionsPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/doctor/prescriptions")
-      if (res.ok) setItems(await res.json())
-      else setError("Failed to load prescriptions")
+      const params = new URLSearchParams()
+      if (search) params.set("search", search)
+      const res = await fetch(`/api/doctor/prescriptions?${params.toString()}`)
+      if (res.ok) {
+        const data = await res.json()
+        setItems(data.items || [])
+      } else setError("Failed to load prescriptions")
     } catch {}
     setLoading(false)
   }
@@ -93,18 +97,23 @@ export default function DoctorPrescriptionsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold text-foreground">Prescriptions</h2>
+    <div className="min-h-screen bg-gradient-to-br from-teal-50/30 via-cyan-50/20 to-blue-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">All Prescriptions</h2>
+          <p className="text-sm text-muted-foreground mt-1">View and manage all prescriptions in the system</p>
+        </div>
         <div className="flex items-center gap-2">
           <Search className="w-5 h-5 text-muted-foreground" />
           <Input
             placeholder="Search by patient/medication/status"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && load()}
             className="w-64"
           />
-          <Button variant="outline" onClick={load}>Refresh</Button>
+          <Button className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 shadow-lg" onClick={load}>Refresh</Button>
         </div>
       </div>
 
@@ -113,9 +122,12 @@ export default function DoctorPrescriptionsPage() {
       )}
 
       {/* Create Prescription */}
-      <Card>
+      <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>New Prescription</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 animate-pulse" />
+            Create New Prescription
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end" onSubmit={createRx}>
@@ -159,16 +171,30 @@ export default function DoctorPrescriptionsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Queue</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Prescription Queue</CardTitle>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500" />
+                My Prescription
+              </span>
+              <span className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-gray-300" />
+                Other Doctor
+              </span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-muted-foreground">
+                  <th className="py-2">Type</th>
                   <th className="py-2">Patient</th>
+                  <th className="py-2">Prescribed By</th>
                   <th className="py-2">Medication</th>
                   <th className="py-2">Dosage</th>
                   <th className="py-2">Date</th>
@@ -177,38 +203,78 @@ export default function DoctorPrescriptionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {(loading ? [] : items.filter((r) => {
-                  const q = search.trim().toLowerCase()
-                  if (!q) return true
-                  return (
-                    r.patient.toLowerCase().includes(q) ||
-                    r.medication.toLowerCase().includes(q) ||
-                    r.status.toLowerCase().includes(q)
-                  )
-                })).map((r) => (
-                  <tr key={r.id} className="border-t border-border">
+                {(loading ? [] : items).map((r) => (
+                  <tr key={r.id} className={`border-t border-border transition-colors ${
+                    r.isMyPrescription 
+                      ? "hover:bg-teal-50/30 dark:hover:bg-teal-950/10" 
+                      : "hover:bg-gray-50 dark:hover:bg-gray-900/10"
+                  }`}>
+                    <td className="py-2">
+                      {r.isMyPrescription ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 animate-pulse" />
+                          <span className="text-xs px-2 py-1 rounded-full bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-950/30 dark:to-cyan-950/30 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                            Mine
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-gray-300" />
+                          <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                            Other
+                          </span>
+                        </div>
+                      )}
+                    </td>
                     <td className="py-2 font-medium text-foreground">{r.patient}</td>
+                    <td className="py-2 text-muted-foreground">{r.doctor}</td>
                     <td className="py-2">{r.medication}</td>
                     <td className="py-2">{r.dosage}</td>
-                    <td className="py-2">{r.date}</td>
-                    <td className="py-2">{r.status}</td>
-                    <td className="py-2 flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => act(r.id, "decline")}>Decline</Button>
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => act(r.id, "approve")}>
-                        Approve
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-red-600 bg-transparent" onClick={() => remove(r.id)}>
-                        Delete
-                      </Button>
+                    <td className="py-2 text-sm text-muted-foreground">{r.date}</td>
+                    <td className="py-2">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        r.status === "Approved"
+                          ? "bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 dark:from-emerald-900/30 dark:to-teal-900/30 dark:text-emerald-400"
+                          : r.status === "Declined"
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                      }`}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="py-2">
+                      {r.isMyPrescription ? (
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="hover:bg-red-50 dark:hover:bg-red-950/20" onClick={() => act(r.id, "decline")}>Decline</Button>
+                          <Button size="sm" className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700" onClick={() => act(r.id, "approve")}>
+                            Approve
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20" onClick={() => remove(r.id)}>
+                            Delete
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">View only</span>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {!loading && items.length === 0 && <div className="text-sm text-muted-foreground mt-2">No prescriptions.</div>}
+            {!loading && items.length === 0 && (
+              <tr>
+                <td className="py-8 text-center text-muted-foreground" colSpan={8}>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="text-4xl">💊</div>
+                    <div>No prescriptions found</div>
+                  </div>
+                </td>
+              </tr>
+            )}
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

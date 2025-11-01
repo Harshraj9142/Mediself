@@ -18,7 +18,7 @@ export default function DoctorDashboard() {
   })
   const [todayList, setTodayList] = useState<Array<{ id: string; time: string; patient: string; reason: string; status: string }>>([])
   const [requests, setRequests] = useState<Array<{ patient: string; request: string; date: string; id?: string }>>([])
-  const [patients, setPatients] = useState<Array<{ id: string; name: string; email: string; lastVisitAt: string | null; conditions: string[] }>>([])
+  const [patients, setPatients] = useState<Array<{ id: string; name: string; email: string; lastVisitAt: string | null; conditions: string[]; hasRelation: boolean }>>([])
   const [patientsLoading, setPatientsLoading] = useState(true)
   const [patientSearch, setPatientSearch] = useState("")
   const { toast } = useToast()
@@ -58,6 +58,7 @@ export default function DoctorDashboard() {
             email: p.email,
             lastVisitAt: p.lastVisitAt ? new Date(p.lastVisitAt).toLocaleDateString() : null,
             conditions: Array.isArray(p.conditions) ? p.conditions : [],
+            hasRelation: !!p.hasRelation,
           }))
         )
       }
@@ -266,7 +267,19 @@ export default function DoctorDashboard() {
       {/* Patients Roster */}
       <Card>
         <CardHeader>
-          <CardTitle>Patients</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>All Patients</CardTitle>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500" />
+                My Patient
+              </span>
+              <span className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-gray-300" />
+                New Patient
+              </span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
@@ -281,6 +294,7 @@ export default function DoctorDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-muted-foreground">
+                  <th className="py-2">Status</th>
                   <th className="py-2">Name</th>
                   <th className="py-2">Email</th>
                   <th className="py-2">Last Visit</th>
@@ -289,15 +303,38 @@ export default function DoctorDashboard() {
               </thead>
               <tbody>
                 {(patientsLoading ? [] : patients).map((p) => (
-                  <tr key={p.id} className="border-t border-border">
+                  <tr key={p.id} className="border-t border-border hover:bg-teal-50/30 dark:hover:bg-teal-950/10 transition-colors">
+                    <td className="py-2">
+                      {p.hasRelation ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 animate-pulse" />
+                          <span className="text-xs px-2 py-1 rounded-full bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-950/30 dark:to-cyan-950/30 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                            My Patient
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-gray-300" />
+                          <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                            New
+                          </span>
+                        </div>
+                      )}
+                    </td>
                     <td className="py-2 font-medium text-foreground">
-                      <Link href={`/doctor-portal/patients/${p.id}`} className="hover:underline">
+                      <Link href={`/doctor-portal/patients/${p.id}`} className="hover:underline hover:text-teal-600">
                         {p.name}
                       </Link>
                     </td>
                     <td className="py-2">{p.email}</td>
                     <td className="py-2">{p.lastVisitAt || "-"}</td>
-                    <td className="py-2">{p.conditions.join(", ")}</td>
+                    <td className="py-2">
+                      {p.conditions.length > 0 ? (
+                        <span className="text-xs">{p.conditions.join(", ")}</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">None</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
