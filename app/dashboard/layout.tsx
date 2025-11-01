@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation"
 import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
 import { Home, Users, FileText, Bell, Pill, Heart, Settings, LogOut, Menu, X, AlertCircle } from "lucide-react"
+import { signOut } from "next-auth/react"
 
 const navItems = [
   { href: "/dashboard", label: "Home", icon: Home },
@@ -66,7 +67,11 @@ export default function DashboardLayout({
 
         {sidebarOpen && (
           <div className="p-4 border-t border-border">
-            <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700 bg-transparent">
+            <Button
+              variant="outline"
+              className="w-full justify-start text-red-600 hover:text-red-700 bg-transparent"
+              onClick={() => signOut({ callbackUrl: "/auth/login" })}
+            >
               <LogOut className="w-5 h-5 mr-3" />
               Logout
             </Button>
