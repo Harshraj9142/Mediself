@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { useToast } from "@/components/ui/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { User, Heart, MapPin, Phone, Shield, Activity, FileText } from "lucide-react"
 
 const ProfileSchema = z.object({
   name: z.string().min(1, "Required").max(200),
@@ -40,6 +41,8 @@ const ProfileSchema = z.object({
 type ProfileForm = z.infer<typeof ProfileSchema>
 
 export default function PatientProfilePage() {
+  const [loading, setLoading] = useState(true)
+  
   const form = useForm<ProfileForm>({
     resolver: zodResolver(ProfileSchema),
     defaultValues: {
@@ -72,6 +75,7 @@ export default function PatientProfilePage() {
 
   useEffect(() => {
     const load = async () => {
+      setLoading(true)
       try {
         const res = await fetch("/api/patient/profile", { cache: "no-store" })
         if (!res.ok) return
@@ -102,6 +106,9 @@ export default function PatientProfilePage() {
           notes: data.notes || "",
         })
       } catch {}
+      finally {
+        setLoading(false)
+      }
     }
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -155,22 +162,33 @@ export default function PatientProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <section className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-border py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50/30 via-purple-50/20 to-blue-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      {/* Header */}
+      <section className="bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 py-12 px-4 sm:px-6 lg:px-8 shadow-lg">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">Profile</h1>
-          <p className="text-muted-foreground">Manage your personal and medical details</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
+            <User className="w-8 h-8" />
+            Patient Profile
+          </h1>
+          <p className="text-indigo-50">Manage your personal and medical details</p>
         </div>
       </section>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Patient Profile</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {loading && <div className="text-center py-8 text-muted-foreground">Loading profile...</div>}
+        
+        {!loading && (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Personal Information */}
+            <Card className="border-2 border-indigo-200 dark:border-indigo-800 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <User className="w-5 h-5 text-indigo-600" />
+                  Personal Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField name="name" control={form.control} render={({ field }) => (
                     <FormItem>
@@ -223,7 +241,18 @@ export default function PatientProfilePage() {
                     </FormItem>
                   )} />
                 </div>
+              </CardContent>
+            </Card>
 
+            {/* Contact & Address */}
+            <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-blue-600" />
+                  Contact & Address
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField name="address_line1" control={form.control} render={({ field }) => (
                     <FormItem>
@@ -274,7 +303,7 @@ export default function PatientProfilePage() {
                     </FormItem>
                   )} />
                 </div>
-
+                
                 <FormField name="address_country" control={form.control} render={({ field }) => (
                   <FormItem>
                     <FormLabel>Country</FormLabel>
@@ -284,8 +313,19 @@ export default function PatientProfilePage() {
                     <FormMessage />
                   </FormItem>
                 )} />
+              </CardContent>
+            </Card>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Medical Information */}
+            <Card className="border-2 border-purple-200 dark:border-purple-800 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-purple-600" />
+                  Medical Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <FormField name="allergies" control={form.control} render={({ field }) => (
                     <FormItem>
                       <FormLabel>Allergies (comma separated)</FormLabel>
@@ -314,28 +354,7 @@ export default function PatientProfilePage() {
                     </FormItem>
                   )} />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField name="insurance_provider" control={form.control} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Insurance Provider</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField name="insurance_policyNumber" control={form.control} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Policy Number</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
-
+                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField name="bloodType" control={form.control} render={({ field }) => (
                     <FormItem>
@@ -374,7 +393,50 @@ export default function PatientProfilePage() {
                     </FormItem>
                   )} />
                 </div>
+              </CardContent>
+            </Card>
 
+            {/* Insurance */}
+            <Card className="border-2 border-cyan-200 dark:border-cyan-800 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-cyan-50 to-teal-50 dark:from-cyan-950/30 dark:to-teal-950/30">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-cyan-600" />
+                  Insurance Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField name="insurance_provider" control={form.control} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Insurance Provider</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField name="insurance_policyNumber" control={form.control} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Policy Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Emergency Contact */}
+            <Card className="border-2 border-red-200 dark:border-red-800 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Phone className="w-5 h-5 text-red-600" />
+                  Emergency Contact
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField name="emergency_name" control={form.control} render={({ field }) => (
                     <FormItem>
@@ -404,7 +466,18 @@ export default function PatientProfilePage() {
                     </FormItem>
                   )} />
                 </div>
+              </CardContent>
+            </Card>
 
+            {/* Additional Notes */}
+            <Card className="border-2 border-amber-200 dark:border-amber-800 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-amber-600" />
+                  Additional Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
                 <FormField name="notes" control={form.control} render={({ field }) => (
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
@@ -414,14 +487,21 @@ export default function PatientProfilePage() {
                     <FormMessage />
                   </FormItem>
                 )} />
+              </CardContent>
+            </Card>
 
-                <div className="flex justify-end">
-                  <Button type="submit">Save Profile</Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+            {/* Save Button */}
+            <div className="flex justify-end gap-4">
+              <Button 
+                type="submit" 
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg px-8"
+              >
+                💾 Save Profile
+              </Button>
+            </div>
+          </form>
+        </Form>
+        )}
       </div>
     </div>
   )

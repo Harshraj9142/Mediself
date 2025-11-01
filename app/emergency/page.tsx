@@ -16,9 +16,19 @@ export default function EmergencyPage() {
     setShowConfirmation(true)
   }
 
-  const handleConfirmSOS = () => {
+  const handleConfirmSOS = async () => {
     setSosActivated(true)
     setShowConfirmation(false)
+    
+    // Send SOS to backend
+    try {
+      await fetch("/api/emergency/sos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ location: "Current Location" }),
+      })
+    } catch {}
+    
     // Simulate SOS deactivation after 5 seconds
     setTimeout(() => setSosActivated(false), 5000)
   }
@@ -28,42 +38,47 @@ export default function EmergencyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-red-50/30 via-rose-50/20 to-orange-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Header */}
-      <section className="bg-gradient-to-r from-[hsl(var(--accent-red))]/20 to-[hsl(var(--accent-red))]/10 border-b border-[hsl(var(--accent-red))]/30 py-8 px-4 sm:px-6 lg:px-8">
+      <section className="bg-gradient-to-r from-red-600 via-rose-600 to-orange-600 py-12 px-4 sm:px-6 lg:px-8 shadow-lg">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">Emergency Services</h1>
-          <p className="text-muted-foreground">Quick access to emergency help and medical assistance</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
+            <AlertCircle className="w-8 h-8" />
+            Emergency Services
+          </h1>
+          <p className="text-red-50">Quick access to emergency help and medical assistance</p>
         </div>
       </section>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <Card className="border-[hsl(var(--accent-red))]/30 bg-[hsl(var(--accent-red))]/5">
+          <Card className="border-4 border-red-500 dark:border-red-700 bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/20 shadow-2xl">
             <CardContent className="pt-6">
-              <div className="flex flex-col items-center justify-center gap-4 py-8">
-                <AlertCircle className="w-12 h-12 text-[hsl(var(--accent-red))]" />
+              <div className="flex flex-col items-center justify-center gap-6 py-12">
+                <div className="p-6 rounded-full bg-gradient-to-br from-red-500 to-rose-500 shadow-2xl">
+                  <AlertCircle className="w-16 h-16 text-white" />
+                </div>
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-foreground mb-2">Emergency SOS</h2>
-                  <p className="text-muted-foreground mb-6">
+                  <h2 className="text-3xl font-bold text-foreground mb-3">Emergency SOS</h2>
+                  <p className="text-muted-foreground mb-8 max-w-md">
                     Press the button below to immediately alert emergency contacts and services
                   </p>
                 </div>
                 <Button
                   onClick={handleSOSClick}
                   disabled={sosActivated}
-                  className={`px-8 py-6 text-lg font-bold rounded-full transition-all ${
+                  className={`px-12 py-8 text-xl font-bold rounded-full transition-all shadow-2xl ${
                     sosActivated
-                      ? "bg-[hsl(var(--accent-red))] hover:bg-[hsl(var(--accent-red))]/90 text-white animate-pulse"
-                      : "bg-[hsl(var(--accent-red))] hover:bg-[hsl(var(--accent-red))]/90 text-white"
+                      ? "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white animate-pulse scale-110"
+                      : "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white hover:scale-105"
                   }`}
                 >
-                  {sosActivated ? "SOS ACTIVATED - CALLING EMERGENCY" : "ACTIVATE SOS"}
+                  {sosActivated ? "🚨 SOS ACTIVATED - CALLING EMERGENCY" : "🆘 ACTIVATE SOS"}
                 </Button>
                 {sosActivated && (
-                  <Badge className="bg-[hsl(var(--accent-red))] text-white gap-2 animate-pulse">
-                    <Heart className="w-3 h-3" />
+                  <Badge className="bg-gradient-to-r from-red-600 to-rose-600 text-white gap-2 animate-pulse text-base px-4 py-2">
+                    <Heart className="w-4 h-4" />
                     Emergency services notified
                   </Badge>
                 )}
@@ -73,40 +88,43 @@ export default function EmergencyPage() {
         </div>
 
         {showConfirmation && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-md border-2 border-[hsl(var(--accent-red))]">
-              <CardHeader className="bg-[hsl(var(--accent-red))]/10">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in">
+            <Card className="w-full max-w-md border-4 border-red-500 shadow-2xl">
+              <CardHeader className="bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl text-[hsl(var(--accent-red))]">Confirm Emergency SOS</CardTitle>
+                  <CardTitle className="text-xl text-red-600 dark:text-red-400 flex items-center gap-2">
+                    <AlertCircle className="w-6 h-6" />
+                    Confirm Emergency SOS
+                  </CardTitle>
                   <button onClick={handleCancel} className="text-muted-foreground hover:text-foreground">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
               </CardHeader>
               <CardContent className="pt-6 space-y-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-[hsl(var(--accent-red))] mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border-2 border-red-200 dark:border-red-800">
+                  <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-medium text-foreground">Send help now?</p>
+                    <p className="font-semibold text-foreground text-lg">Send help now?</p>
                     <p className="text-sm text-muted-foreground mt-1">
                       This will immediately notify your emergency contacts and nearby hospitals with your location.
                     </p>
                   </div>
                 </div>
 
-                <div className="bg-secondary p-3 rounded-lg space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">Will notify:</p>
-                  <ul className="text-sm space-y-1">
-                    <li className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-[hsl(var(--accent-blue))]" />
-                      <span>Emergency Contacts (3)</span>
+                <div className="bg-secondary p-4 rounded-lg space-y-3 border border-border">
+                  <p className="text-sm font-semibold text-foreground">Will notify:</p>
+                  <ul className="text-sm space-y-2">
+                    <li className="flex items-center gap-3 p-2 rounded bg-blue-50 dark:bg-blue-950/20">
+                      <Phone className="w-5 h-5 text-blue-600" />
+                      <span>Your Emergency Contacts</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-[hsl(var(--accent-orange))]" />
+                    <li className="flex items-center gap-3 p-2 rounded bg-orange-50 dark:bg-orange-950/20">
+                      <MapPin className="w-5 h-5 text-orange-600" />
                       <span>Nearby Hospitals</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-[hsl(var(--accent-red))]" />
+                    <li className="flex items-center gap-3 p-2 rounded bg-red-50 dark:bg-red-950/20">
+                      <AlertCircle className="w-5 h-5 text-red-600" />
                       <span>Emergency Services (911)</span>
                     </li>
                   </ul>
@@ -118,9 +136,9 @@ export default function EmergencyPage() {
                   </Button>
                   <Button
                     onClick={handleConfirmSOS}
-                    className="flex-1 bg-[hsl(var(--accent-red))] hover:bg-[hsl(var(--accent-red))]/90 text-white"
+                    className="flex-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg"
                   >
-                    Send SOS Now
+                    🆘 Send SOS Now
                   </Button>
                 </div>
               </CardContent>
@@ -131,52 +149,63 @@ export default function EmergencyPage() {
         {/* Emergency Info Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* National Emergency Number */}
-          <Card>
-            <CardHeader>
+          <Card className="border-2 border-red-200 dark:border-red-800 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Phone className="w-5 h-5 text-[hsl(var(--accent-red))]" />
+                <Phone className="w-5 h-5 text-red-600" />
                 Emergency Number
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-[hsl(var(--accent-red))] mb-2">911</div>
+              <div className="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">911</div>
               <p className="text-sm text-muted-foreground mb-4">Call for immediate medical emergency</p>
-              <Button className="w-full bg-[hsl(var(--accent-red))] hover:bg-[hsl(var(--accent-red))]/90 text-white">
-                Call 911
+              <Button 
+                onClick={() => window.location.href = 'tel:911'}
+                className="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg"
+              >
+                📞 Call 911
               </Button>
             </CardContent>
           </Card>
 
           {/* Poison Control */}
-          <Card>
-            <CardHeader>
+          <Card className="border-2 border-amber-200 dark:border-amber-800 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30">
               <CardTitle className="text-lg flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-[hsl(var(--accent-yellow))]" />
+                <AlertCircle className="w-5 h-5 text-amber-600" />
                 Poison Control
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-[hsl(var(--accent-yellow))] mb-2">1-800-222-1222</div>
+              <div className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-2">1-800-222-1222</div>
               <p className="text-sm text-muted-foreground mb-4">For poisoning emergencies</p>
-              <Button variant="outline" className="w-full bg-transparent">
-                Call Now
+              <Button 
+                onClick={() => window.location.href = 'tel:1-800-222-1222'}
+                variant="outline" 
+                className="w-full hover:bg-amber-50 dark:hover:bg-amber-950/20"
+              >
+                📞 Call Now
               </Button>
             </CardContent>
           </Card>
 
           {/* Mental Health Crisis */}
-          <Card>
-            <CardHeader>
+          <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Heart className="w-5 h-5 text-[hsl(var(--accent-blue))]" />
+                <Heart className="w-5 h-5 text-blue-600" />
                 Crisis Hotline
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-[hsl(var(--accent-blue))] mb-2">988</div>
+              <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">988</div>
               <p className="text-sm text-muted-foreground mb-4">Mental health crisis support</p>
-              <Button variant="outline" className="w-full bg-transparent">
-                Call Now
+              <Button 
+                onClick={() => window.location.href = 'tel:988'}
+                variant="outline" 
+                className="w-full hover:bg-blue-50 dark:hover:bg-blue-950/20"
+              >
+                📞 Call Now
               </Button>
             </CardContent>
           </Card>
