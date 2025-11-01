@@ -25,6 +25,10 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const period = (searchParams.get("period") || "today") as "today" | "upcoming" | "history"
+  const search = (searchParams.get("search") || "").trim().toLowerCase()
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)))
+  const skip = (page - 1) * limit
 
   try {
     const client = (await clientPromise) as MongoClient
@@ -43,20 +47,43 @@ export async function GET(req: Request) {
       query.scheduledAt = { $lt: todayStart }
     }
 
-    const items = await col.find(query).sort({ scheduledAt: 1 }).limit(200).toArray()
+    // Add search filter
+    if (search) {
+      query.$or = [
+        { medicine: { $regex: search, $options: "i" } },
+        { dosage: { $regex: search, $options: "i" } },
+        { reason: { $regex: search, $options: "i" } },
+        { frequency: { $regex: search, $options: "i" } },
+      ]
+    }
 
-    return NextResponse.json(
-      items.map((r: any) => ({
-        id: String(r._id),
-        medicine: r.medicine,
-        dosage: r.dosage,
-        time: r.scheduledAt ? new Date(r.scheduledAt).toLocaleString() : "",
-        status: r.status || "pending",
-        reason: r.reason || "",
-      }))
-    )
+    // Get total count
+    const total = await col.countDocuments(query)
+
+    // Get paginated items
+    const items = await col
+      .find(query)
+      .sort({ scheduledAt: period === "history" ? -1 : 1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray()
+
+    const result = items.map((r: any) => ({
+      id: String(r._id),
+      medicine: r.medicine || "Medicine",
+      dosage: r.dosage || "",
+      time: r.scheduledAt ? new Date(r.scheduledAt).toLocaleString() : "",
+      scheduledAt: r.scheduledAt,
+      frequency: r.frequency || "daily",
+      status: r.status || "pending",
+      reason: r.reason || "",
+      createdAt: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "",
+      active: r.active !== false,
+    }))
+
+    return NextResponse.json({ page, limit, total, items: result, period })
   } catch (e) {
-    return NextResponse.json([])
+    return NextResponse.json({ page: 1, limit: 50, total: 0, items: [], period })
   }
 }
 

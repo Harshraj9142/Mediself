@@ -12,12 +12,12 @@ export default function RemindersPage() {
   const [activeTab, setActiveTab] = useState("today")
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50/30 via-rose-50/20 to-orange-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Header */}
-      <section className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-border py-8 px-4 sm:px-6 lg:px-8">
+      <section className="bg-gradient-to-r from-pink-600 via-rose-600 to-orange-600 py-12 px-4 sm:px-6 lg:px-8 shadow-lg">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">Medicine Reminders</h1>
-          <p className="text-muted-foreground">Never miss a dose with smart medication reminders</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">💊 Medicine Reminders</h1>
+          <p className="text-pink-50">Never miss a dose with smart medication reminders</p>
         </div>
       </section>
 
@@ -25,7 +25,10 @@ export default function RemindersPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Add Medicine Button */}
         <div className="mb-6 flex justify-end">
-          <Button onClick={() => setShowAddForm(!showAddForm)} className="gap-2">
+          <Button 
+            onClick={() => setShowAddForm(!showAddForm)} 
+            className="gap-2 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 shadow-lg"
+          >
             <Plus className="w-4 h-4" />
             Add Medicine
           </Button>
@@ -40,10 +43,25 @@ export default function RemindersPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="today">Today</TabsTrigger>
-            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 mb-6 bg-white dark:bg-slate-800 shadow-md p-1 rounded-lg">
+            <TabsTrigger 
+              value="today"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-rose-500 data-[state=active]:text-white"
+            >
+              📅 Today
+            </TabsTrigger>
+            <TabsTrigger 
+              value="upcoming"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white"
+            >
+              📆 Upcoming
+            </TabsTrigger>
+            <TabsTrigger 
+              value="history"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
+            >
+              📋 History
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="today">

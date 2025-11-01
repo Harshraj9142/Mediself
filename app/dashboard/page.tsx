@@ -27,11 +27,21 @@ const heartRateData = [
 
 export default function PatientDashboard() {
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState<{ upcomingAppointments: number; activeReminders: number; recentReports: number; healthScore: number }>({
+  const [stats, setStats] = useState<any>({
     upcomingAppointments: 0,
-    activeReminders: 0,
+    totalAppointments: 0,
+    completedAppointments: 0,
+    pendingAppointments: 0,
+    totalPrescriptions: 0,
+    approvedPrescriptions: 0,
+    pendingPrescriptions: 0,
+    totalLabs: 0,
+    flaggedLabs: 0,
+    acknowledgedLabs: 0,
+    totalReports: 0,
     recentReports: 0,
-    healthScore: 85,
+    activeReminders: 0,
+    healthScore: 70,
   })
   const [recentActivity, setRecentActivity] = useState<Array<{ type: string; desc: string; time: string }>>([])
 
@@ -56,28 +66,22 @@ export default function PatientDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50/30 via-cyan-50/20 to-blue-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">Patient Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">Welcome back! Here's your health overview</p>
+      </div>
+
+      {/* Primary Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-teal-900/20 dark:to-cyan-800/20 border-teal-200 dark:border-teal-700 hover:shadow-lg transition-shadow duration-300">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Upcoming Appointments</p>
-                <p className="text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">{loading ? "-" : stats.upcomingAppointments}</p>
+                <p className="text-xs text-muted-foreground">Total Appointments</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">{loading ? "-" : stats.totalAppointments}</p>
+                <p className="text-xs text-teal-600 dark:text-teal-400 mt-1">Upcoming: {stats.upcomingAppointments}</p>
               </div>
               <Calendar className="w-10 h-10 text-teal-500 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-900/20 dark:to-teal-800/20 border-emerald-200 dark:border-emerald-700 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Active Reminders</p>
-                <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{loading ? "-" : stats.activeReminders}</p>
-              </div>
-              <Pill className="w-10 h-10 text-emerald-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -86,10 +90,24 @@ export default function PatientDashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Recent Reports</p>
-                <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{loading ? "-" : stats.recentReports}</p>
+                <p className="text-xs text-muted-foreground">Total Prescriptions</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{loading ? "-" : stats.totalPrescriptions}</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Approved: {stats.approvedPrescriptions} | Pending: {stats.pendingPrescriptions}</p>
               </div>
-              <FileText className="w-10 h-10 text-blue-500 opacity-50" />
+              <Pill className="w-10 h-10 text-blue-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-900/20 dark:to-teal-800/20 border-emerald-200 dark:border-emerald-700 hover:shadow-lg transition-shadow duration-300">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Total Reports</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{loading ? "-" : stats.totalReports}</p>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Last 30 days: {stats.recentReports}</p>
+              </div>
+              <FileText className="w-10 h-10 text-emerald-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -98,10 +116,78 @@ export default function PatientDashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Health Score</p>
+                <p className="text-xs text-muted-foreground">Health Score</p>
                 <p className="text-3xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">{loading ? "-" : `${stats.healthScore}%`}</p>
+                <p className="text-xs text-cyan-600 dark:text-cyan-400 mt-1">
+                  {stats.healthScore >= 90 ? "Excellent" : stats.healthScore >= 75 ? "Good" : "Fair"}
+                </p>
               </div>
               <TrendingUp className="w-10 h-10 text-cyan-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-purple-50 to-pink-100 dark:from-purple-900/20 dark:to-pink-800/20 border-purple-200 dark:border-purple-700 hover:shadow-lg transition-shadow duration-300">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Lab Results</p>
+                <p className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{loading ? "-" : stats.totalLabs}</p>
+                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                  {stats.flaggedLabs > 0 ? `⚠️ ${stats.flaggedLabs} Flagged` : "✓ All Normal"}
+                </p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+                <span className="text-lg">🔬</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-rose-50 to-orange-100 dark:from-rose-900/20 dark:to-orange-800/20 border-rose-200 dark:border-rose-700 hover:shadow-lg transition-shadow duration-300">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Active Reminders</p>
+                <p className="text-2xl font-bold bg-gradient-to-r from-rose-600 to-orange-600 bg-clip-text text-transparent">{loading ? "-" : stats.activeReminders}</p>
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">Medication alerts</p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-rose-500/20 flex items-center justify-center">
+                <span className="text-lg">🔔</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-50 to-yellow-100 dark:from-amber-900/20 dark:to-yellow-800/20 border-amber-200 dark:border-amber-700 hover:shadow-lg transition-shadow duration-300">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Completed Visits</p>
+                <p className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">{loading ? "-" : stats.completedAppointments}</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">All time</p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <span className="text-lg">✅</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-teal-100 dark:from-green-900/20 dark:to-teal-800/20 border-green-200 dark:border-green-700 hover:shadow-lg transition-shadow duration-300">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Pending Items</p>
+                <p className="text-2xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">{loading ? "-" : (stats.pendingAppointments + stats.pendingPrescriptions)}</p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">Needs attention</p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                <span className="text-lg">📋</span>
+              </div>
             </div>
           </CardContent>
         </Card>

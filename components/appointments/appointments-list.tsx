@@ -3,7 +3,8 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar, Clock, MapPin, Trash2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Calendar, Clock, MapPin, Trash2, Search } from "lucide-react"
 import { useEffect, useState } from "react"
 
 type Apt = {
@@ -11,16 +12,22 @@ type Apt = {
   doctorId: string
   doctor: string
   specialty: string
+  reason: string
   date: string
   time: string
+  dateTime: string
   location: string
-  status: "confirmed" | "pending" | string
+  status: string
+  createdAt: string
 }
 
 export function AppointmentsList() {
   const [items, setItems] = useState<Apt[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
   const [reschedulingId, setReschedulingId] = useState<string | null>(null)
   const [reschedDate, setReschedDate] = useState<string>("") // YYYY-MM-DD
   const [reschedSlots, setReschedSlots] = useState<string[]>([])
@@ -32,14 +39,18 @@ export function AppointmentsList() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/patient/appointments")
+      const params = new URLSearchParams()
+      if (search) params.set("search", search)
+      params.set("page", String(page))
+      const res = await fetch(`/api/patient/appointments?${params.toString()}`)
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setError(data?.error || "Failed to load appointments")
         setItems([])
       } else {
-        const data = (await res.json()) as Apt[]
-        setItems(data)
+        const data = await res.json()
+        setItems(data.items || [])
+        setTotal(data.total || 0)
       }
     } catch (e) {
       setError("Network error")
@@ -51,7 +62,12 @@ export function AppointmentsList() {
 
   useEffect(() => {
     load()
-  }, [])
+  }, [page])
+
+  const handleSearch = () => {
+    setPage(1)
+    load()
+  }
 
   const remove = async (id: string) => {
     try {
@@ -128,30 +144,56 @@ export function AppointmentsList() {
     }
   }
 
-  if (loading) return <div className="text-sm text-muted-foreground">Loading appointments...</div>
-  if (error) return <div className="text-sm text-accent-red">{error}</div>
-
   return (
-    <div className="space-y-3">
-      {items.map((apt) => (
+    <div className="space-y-4">
+      {/* Search Bar */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by doctor, reason, status..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            className="pl-10"
+          />
+        </div>
+        <Button onClick={handleSearch} className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700">
+          Search
+        </Button>
+      </div>
+
+      {loading && <div className="text-sm text-muted-foreground">Loading appointments...</div>}
+      {error && <div className="text-sm text-red-600">{error}</div>}
+
+      {!loading && !error && items.map((apt) => (
         <Card key={apt.id} className="hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
-            <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start justify-between gap-4">
               <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="font-semibold text-foreground">{apt.doctor}</div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="font-semibold text-foreground text-lg">{apt.doctor}</div>
                   <Badge
                     variant="outline"
                     className={
-                      apt.status === "confirmed"
-                        ? "bg-primary/10 text-primary border-primary/30"
-                        : "bg-accent-yellow/10 text-accent-yellow border-accent-yellow/30"
+                      apt.status === "Confirmed"
+                        ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        : apt.status === "Pending"
+                        ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400"
+                        : apt.status === "Completed"
+                        ? "bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-900/30 dark:text-teal-400"
+                        : "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-900/30 dark:text-gray-400"
                     }
                   >
-                    {apt.status === "confirmed" ? "Confirmed" : "Pending"}
+                    {apt.status}
+                  </Badge>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400">
+                    {apt.specialty}
                   </Badge>
                 </div>
-                <div className="text-sm text-muted-foreground">{apt.specialty}</div>
+                <div className="text-sm text-muted-foreground">
+                  <span className="font-medium">Reason:</span> {apt.reason}
+                </div>
                 <div className="flex flex-col gap-2 text-sm text-muted-foreground pt-2">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
@@ -224,7 +266,39 @@ export function AppointmentsList() {
           </CardContent>
         </Card>
       ))}
-      {items.length === 0 && <div className="text-sm text-muted-foreground">No appointments found.</div>}
+      {!loading && items.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="text-4xl mb-2">📅</div>
+            <div className="text-muted-foreground">No appointments found</div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pagination */}
+      {!loading && total > 50 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {Math.ceil(total / 50)}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => p + 1)}
+            disabled={page >= Math.ceil(total / 50)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

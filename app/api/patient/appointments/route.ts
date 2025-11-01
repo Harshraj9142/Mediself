@@ -5,12 +5,18 @@ import { ObjectId } from "mongodb"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const role = (session.user as any).role
   if (role !== "patient") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   const patientId = (session.user as any).id as string
+
+  const { searchParams } = new URL(req.url)
+  const search = (searchParams.get("search") || "").trim().toLowerCase()
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)))
+  const skip = (page - 1) * limit
 
   try {
     const client = (await clientPromise) as MongoClient
@@ -18,38 +24,61 @@ export async function GET() {
     const appointments = db.collection("appointments")
     const users = db.collection("users")
 
+    // Build query for patient's appointments
+    const query: any = { patientId: new ObjectId(patientId) }
+    if (search) {
+      query.$or = [
+        { doctorName: { $regex: search, $options: "i" } },
+        { reason: { $regex: search, $options: "i" } },
+        { status: { $regex: search, $options: "i" } },
+        { location: { $regex: search, $options: "i" } },
+      ]
+    }
+
+    // Get total count
+    const total = await appointments.countDocuments(query)
+
+    // Get paginated appointments
     const list = await appointments
-      .find({ patientId: new ObjectId(patientId) })
-      .sort({ date: 1 })
-      .limit(200)
+      .find(query)
+      .sort({ date: -1 })  // Most recent first
+      .skip(skip)
+      .limit(limit)
       .toArray()
 
+    // Fetch doctor details
     const doctorIds = Array.from(
       new Set(list.map((a: any) => String(a.doctorId)).filter(Boolean))
     ).map((id) => new ObjectId(id))
     const doctors = doctorIds.length
       ? await users
           .find({ _id: { $in: doctorIds } })
-          .project({ name: 1, email: 1 })
+          .project({ name: 1, email: 1, specialty: 1 })
           .toArray()
       : []
     const doctorMap = new Map<string, any>()
     doctors.forEach((d) => doctorMap.set(String(d._id), d))
 
-    return NextResponse.json(
-      list.map((a: any) => ({
+    const items = list.map((a: any) => {
+      const doctor = doctorMap.get(String(a.doctorId))
+      return {
         id: String(a._id),
         doctorId: String(a.doctorId),
-        doctor: a.doctorName || doctorMap.get(String(a.doctorId))?.name || doctorMap.get(String(a.doctorId))?.email || "Doctor",
-        specialty: a.specialty || "General",
+        doctor: a.doctorName || doctor?.name || doctor?.email || "Doctor",
+        specialty: doctor?.specialty || a.specialty || "General",
+        reason: a.reason || "Consultation",
         date: new Date(a.date).toLocaleDateString(),
         time: new Date(a.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        dateTime: a.date,  // ISO string for sorting/filtering
         location: a.location || "Clinic",
-        status: (a.status || "Pending").toLowerCase(),
-      }))
-    )
+        status: a.status || "Pending",
+        createdAt: a.createdAt ? new Date(a.createdAt).toLocaleDateString() : "",
+      }
+    })
+
+    return NextResponse.json({ page, limit, total, items })
   } catch (e) {
-    return NextResponse.json([])
+    return NextResponse.json({ page: 1, limit: 50, total: 0, items: [] })
   }
 }
 
