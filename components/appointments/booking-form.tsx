@@ -20,7 +20,8 @@ const doctors: Record<string, string> = {
   "4": "Dr. James Wilson",
 }
 
-const timeSlots = ["9:00 AM", "10:00 AM", "11:00 AM", "2:00 PM", "3:00 PM", "4:00 PM"]
+// dynamic time slots loaded from backend
+import { useEffect } from "react"
 
 export function BookingForm({ selectedDate, selectedDoctor, onCancel }: BookingFormProps) {
   const [selectedTime, setSelectedTime] = useState<string>()
@@ -28,6 +29,7 @@ export function BookingForm({ selectedDate, selectedDoctor, onCancel }: BookingF
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [slots, setSlots] = useState<string[]>([])
 
   const parseTimeToDate = (baseDate: Date, time: string) => {
     const m = time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
@@ -70,6 +72,22 @@ export function BookingForm({ selectedDate, selectedDoctor, onCancel }: BookingF
       setSubmitting(false)
     }
   }
+
+  useEffect(() => {
+    const load = async () => {
+      setSlots([])
+      if (!selectedDoctor || !selectedDate) return
+      const date = selectedDate.toISOString().slice(0, 10)
+      try {
+        const res = await fetch(`/api/patient/availability?doctorId=${encodeURIComponent(selectedDoctor)}&date=${encodeURIComponent(date)}`)
+        if (res.ok) {
+          const data = await res.json()
+          setSlots(Array.isArray(data?.slots) ? data.slots : [])
+        }
+      } catch {}
+    }
+    load()
+  }, [selectedDoctor, selectedDate])
 
   if (isSubmitted) {
     return (
@@ -119,7 +137,7 @@ export function BookingForm({ selectedDate, selectedDoctor, onCancel }: BookingF
           <div>
             <label className="block text-sm font-semibold text-foreground mb-3">Select Time Slot</label>
             <div className="grid grid-cols-3 gap-2">
-              {timeSlots.map((time) => (
+              {(slots.length ? slots : ["9:00 AM", "10:00 AM", "11:00 AM", "2:00 PM", "3:00 PM", "4:00 PM"]).map((time) => (
                 <button
                   key={time}
                   type="button"

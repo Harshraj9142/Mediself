@@ -69,17 +69,39 @@ export async function POST(req: Request) {
     const client = (await clientPromise) as MongoClient
     const db = client.db(process.env.MONGODB_DB)
     const users = db.collection("users")
+    const settings = db.collection("doctor_settings")
+    const appointments = db.collection("appointments")
 
     const doctor = await users.findOne({ _id: new ObjectId(doctorId) })
     const docName = (doctor as any)?.name || (doctor as any)?.email || "Doctor"
 
-    const res = await db.collection("appointments").insertOne({
+    // Validate within doctor's availability window
+    const when = new Date(dateISO)
+    if (isNaN(when.getTime())) return NextResponse.json({ error: "Invalid dateISO" }, { status: 400 })
+    const weekdayKey = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][when.getDay()]
+    const docSettings = (await settings.findOne({ doctorId: new ObjectId(doctorId) })) as any
+    const rule = docSettings?.availability?.[weekdayKey]
+    const toMinutes = (s: string) => {
+      const [h, m] = (s || "").split(":").map((x: string) => parseInt(x, 10))
+      return h * 60 + m
+    }
+    if (!rule || !rule.enabled) return NextResponse.json({ error: "Doctor unavailable that day" }, { status: 400 })
+    const mins = when.getHours() * 60 + when.getMinutes()
+    if (mins < toMinutes(rule.start || "09:00") || mins >= toMinutes(rule.end || "17:00")) {
+      return NextResponse.json({ error: "Time outside availability" }, { status: 400 })
+    }
+
+    // Conflict check: no other appointment at same doctor/time
+    const conflict = await appointments.findOne({ doctorId: new ObjectId(doctorId), date: when })
+    if (conflict) return NextResponse.json({ error: "Slot already taken" }, { status: 409 })
+
+    const res = await appointments.insertOne({
       doctorId: new ObjectId(doctorId),
       doctorName: docName,
       patientId: new ObjectId(patientId),
       patientName,
       reason,
-      date: new Date(dateISO),
+      date: when,
       status: "Pending",
       createdAt: new Date(),
     })
