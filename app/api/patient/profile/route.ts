@@ -142,6 +142,35 @@ export async function POST(req: Request) {
 
     const id = res.upsertedId ? String(res.upsertedId) : String((await profiles.findOne({ userId: new ObjectId(patientId) }))?._id || "")
 
+    // Log activity for patient dashboard
+    try {
+      const changed = [
+        data.name ? "name" : null,
+        data.phone ? "phone" : null,
+        data.address ? "address" : null,
+        data.allergies ? "allergies" : null,
+        data.medications ? "medications" : null,
+        data.conditions ? "conditions" : null,
+        data.emergencyContact ? "emergency contact" : null,
+        data.insurance ? "insurance" : null,
+        data.bloodType ? "blood type" : null,
+        data.heightCm ? "height" : null,
+        data.weightKg ? "weight" : null,
+        data.dob ? "dob" : null,
+        data.gender ? "gender" : null,
+        data.notes ? "notes" : null,
+      ].filter(Boolean)
+      const summary = changed.length ? `Updated ${changed.slice(0, 3).join(", ")}${changed.length > 3 ? " and more" : ""}` : "Updated profile"
+      const client = (await clientPromise) as MongoClient
+      const db = client.db(process.env.MONGODB_DB)
+      await db.collection("activities").insertOne({
+        userId: new ObjectId(patientId),
+        type: "Profile",
+        desc: summary,
+        createdAt: new Date(),
+      })
+    } catch {}
+
     return NextResponse.json({ ok: true, id })
   } catch (e) {
     return NextResponse.json({ error: "Failed to save" }, { status: 500 })

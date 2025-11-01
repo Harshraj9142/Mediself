@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Users, Calendar, CheckCircle, Clock } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
+import Link from "next/link"
 
 export default function DoctorDashboard() {
   const [loading, setLoading] = useState(true)
@@ -14,7 +15,7 @@ export default function DoctorDashboard() {
     completed: 0,
     pending: 0,
   })
-  const [todayList, setTodayList] = useState<Array<{ time: string; patient: string; reason: string; status: string }>>([])
+  const [todayList, setTodayList] = useState<Array<{ id: string; time: string; patient: string; reason: string; status: string }>>([])
   const [requests, setRequests] = useState<Array<{ patient: string; request: string; date: string; id?: string }>>([])
   const [patients, setPatients] = useState<Array<{ id: string; name: string; email: string; lastVisitAt: string | null; conditions: string[] }>>([])
   const [patientsLoading, setPatientsLoading] = useState(true)
@@ -71,6 +72,29 @@ export default function DoctorDashboard() {
         if (r.ok) setRequests(await r.json())
       } else {
         alert("Action failed")
+      }
+    } catch {
+      alert("Network error")
+    }
+  }
+
+  const updateAptStatus = async (id: string, status: string) => {
+    try {
+      const res = await fetch(`/api/doctor/appointments/${id}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      })
+      if (res.ok) {
+        // refresh dashboard blocks
+        const r = await fetch("/api/dashboard/doctor")
+        if (r.ok) {
+          const data = await r.json()
+          setStats(data.stats)
+          setTodayList(data.todayList)
+        }
+      } else {
+        alert("Failed to update appointment status")
       }
     } catch {
       alert("Network error")
@@ -159,6 +183,12 @@ export default function DoctorDashboard() {
                   >
                     {apt.status}
                   </span>
+                  <div className="flex gap-2 justify-end mt-2">
+                    <Button size="sm" variant="outline" onClick={() => updateAptStatus(apt.id, "In Progress")}>In Progress</Button>
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => updateAptStatus(apt.id, "Completed")}>
+                      Complete
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -226,7 +256,11 @@ export default function DoctorDashboard() {
               <tbody>
                 {(patientsLoading ? [] : patients).map((p) => (
                   <tr key={p.id} className="border-t border-border">
-                    <td className="py-2 font-medium text-foreground">{p.name}</td>
+                    <td className="py-2 font-medium text-foreground">
+                      <Link href={`/doctor-portal/patients/${p.id}`} className="hover:underline">
+                        {p.name}
+                      </Link>
+                    </td>
                     <td className="py-2">{p.email}</td>
                     <td className="py-2">{p.lastVisitAt || "-"}</td>
                     <td className="py-2">{p.conditions.join(", ")}</td>

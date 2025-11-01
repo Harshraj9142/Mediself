@@ -11,6 +11,7 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
   const role = (session.user as any).role
   if (role !== "doctor") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   const doctorId = (session.user as any).id as string
+  const doctorName = (session.user as any).name || (session.user as any).email
 
   try {
     const client = (await clientPromise) as MongoClient
@@ -25,8 +26,19 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
       }
     })()
     if (_id) {
-      const res = await labs.updateOne({ _id, doctorId: new ObjectId(doctorId) }, { $set: { acknowledged: true, updatedAt: new Date() } })
-      if (res.matchedCount > 0) return NextResponse.json({ ok: true, id: params.id, acknowledged: true })
+      const labDoc = await labs.findOne({ _id, doctorId: new ObjectId(doctorId) })
+      if (labDoc) {
+        await labs.updateOne({ _id }, { $set: { acknowledged: true, updatedAt: new Date() } })
+        try {
+          await db.collection("activities").insertOne({
+            userId: labDoc.patientId,
+            type: "Lab",
+            desc: `Doctor ${doctorName} acknowledged lab: ${labDoc.test || "Result"}`,
+            createdAt: new Date(),
+          })
+        } catch {}
+        return NextResponse.json({ ok: true, id: params.id, acknowledged: true })
+      }
     }
     await overrides.updateOne(
       { type: "lab", doctorId: new ObjectId(doctorId), itemId: params.id },

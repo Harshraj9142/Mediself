@@ -105,6 +105,33 @@ export async function POST(req: Request) {
       status: "Pending",
       createdAt: new Date(),
     })
+    // Ensure doctor-patient relation exists and update last visit
+    try {
+      const profiles = db.collection("patient_profiles")
+      const relations = db.collection("doctor_patients")
+      const profile = (await profiles.findOne({ userId: new ObjectId(patientId) })) as any
+      await relations.updateOne(
+        { doctorId: new ObjectId(doctorId), patientId: new ObjectId(patientId) },
+        {
+          $setOnInsert: { createdAt: new Date() },
+          $set: {
+            patientName: patientName,
+            lastVisitAt: when,
+            conditions: Array.isArray(profile?.conditions) ? profile.conditions : [],
+          },
+        },
+        { upsert: true }
+      )
+    } catch {}
+    // Log activity for patient dashboard
+    try {
+      await db.collection("activities").insertOne({
+        userId: new ObjectId(patientId),
+        type: "Appointment",
+        desc: `Booked appointment with ${docName} for ${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+        createdAt: new Date(),
+      })
+    } catch {}
 
     return NextResponse.json({ ok: true, id: String(res.insertedId) })
   } catch (e) {

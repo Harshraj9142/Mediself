@@ -62,6 +62,7 @@ export async function GET() {
         pending: pendingCount,
       },
       todayList: todayList.map((a) => ({
+        id: String(a._id),
         time: new Date(a.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         patient: a.patientName || String(a.patientId || "Patient"),
         reason: a.reason || "Consultation",

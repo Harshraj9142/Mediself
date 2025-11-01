@@ -11,8 +11,11 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
   const role = (session.user as any).role
   if (role !== "doctor") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   const doctorId = (session.user as any).id as string
+  const doctorName = (session.user as any).name || (session.user as any).email
 
   try {
+    const body = await _.json().catch(() => ({})) as { comment?: string }
+    const comment = (body.comment || "").trim()
     const client = (await clientPromise) as MongoClient
     const db = client.db(process.env.MONGODB_DB)
     const col = db.collection("prescriptions")
@@ -25,14 +28,38 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
       }
     })()
     if (_id) {
-      const res = await col.updateOne({ _id }, { $set: { status: "Declined" } })
-      if (res.matchedCount > 0) return NextResponse.json({ ok: true, id: params.id, status: "Declined" })
+      const rx = await col.findOne({ _id })
+      const res = await col.updateOne(
+        { _id },
+        { $set: { status: "Declined", declinedBy: new ObjectId(doctorId), declinedByName: doctorName, declinedAt: new Date(), declinedComment: comment } }
+      )
+      if (res.matchedCount > 0) {
+        if (rx?.patientId) {
+          try {
+            await db.collection("activities").insertOne({
+              userId: rx.patientId,
+              type: "Prescription",
+              desc: `Doctor ${doctorName} declined ${rx.medication || rx.name || "prescription"}${comment ? `: ${comment}` : ""}`,
+              createdAt: new Date(),
+            })
+          } catch {}
+        }
+        return NextResponse.json({ ok: true, id: params.id, status: "Declined" })
+      }
     }
     await overrides.updateOne(
       { type: "prescription", doctorId: new ObjectId(doctorId), itemId: params.id },
-      { $set: { status: "Declined", updatedAt: new Date() }, $setOnInsert: { createdAt: new Date() } },
+      { $set: { status: "Declined", updatedAt: new Date(), declinedComment: comment }, $setOnInsert: { createdAt: new Date() } },
       { upsert: true }
     )
+    try {
+      await db.collection("activities").insertOne({
+        userId: new ObjectId(doctorId),
+        type: "Prescription",
+        desc: `Declined prescription ${params.id}${comment ? `: ${comment}` : ""}`,
+        createdAt: new Date(),
+      })
+    } catch {}
     return NextResponse.json({ ok: true, id: params.id, status: "Declined" })
   } catch {
     return NextResponse.json({ ok: true, id: params.id, status: "Declined" })

@@ -50,7 +50,12 @@ export default function DoctorPrescriptionsPage() {
 
   const act = async (id: string, action: "approve" | "decline") => {
     try {
-      const res = await fetch(`/api/doctor/prescriptions/${id}/${action}`, { method: "POST" })
+      const comment = window.prompt(`Optional ${action} comment:`) || ""
+      const res = await fetch(`/api/doctor/prescriptions/${id}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comment }),
+      })
       if (res.ok) {
         setMessage(action === "approve" ? "Approved" : "Declined")
         await load()
