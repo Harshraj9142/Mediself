@@ -6,6 +6,7 @@ import { Users, Calendar, CheckCircle, Clock } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function DoctorDashboard() {
   const [loading, setLoading] = useState(true)
@@ -20,6 +21,7 @@ export default function DoctorDashboard() {
   const [patients, setPatients] = useState<Array<{ id: string; name: string; email: string; lastVisitAt: string | null; conditions: string[] }>>([])
   const [patientsLoading, setPatientsLoading] = useState(true)
   const [patientSearch, setPatientSearch] = useState("")
+  const { toast } = useToast()
 
   useEffect(() => {
     const load = async () => {
@@ -30,8 +32,12 @@ export default function DoctorDashboard() {
           setStats(data.stats)
           setTodayList(data.todayList)
           setRequests(data.requests)
+        } else {
+          toast({ title: "Failed to load dashboard", variant: "destructive" })
         }
-      } catch {}
+      } catch {
+        toast({ title: "Network error", variant: "destructive" })
+      }
       setLoading(false)
     }
     load()
@@ -71,10 +77,10 @@ export default function DoctorDashboard() {
         const r = await fetch("/api/doctor/requests")
         if (r.ok) setRequests(await r.json())
       } else {
-        alert("Action failed")
+        toast({ title: "Request action failed", variant: "destructive" })
       }
     } catch {
-      alert("Network error")
+      toast({ title: "Network error", variant: "destructive" })
     }
   }
 
@@ -94,10 +100,37 @@ export default function DoctorDashboard() {
           setTodayList(data.todayList)
         }
       } else {
-        alert("Failed to update appointment status")
+        toast({ title: "Failed to update appointment status", variant: "destructive" })
       }
     } catch {
-      alert("Network error")
+      toast({ title: "Network error", variant: "destructive" })
+    }
+  }
+
+  const rescheduleApt = async (id: string) => {
+    const date = window.prompt("New date (YYYY-MM-DD):") || ""
+    if (!date) return
+    const time = window.prompt("New time (HH:MM):") || ""
+    if (!time) return
+    try {
+      const res = await fetch(`/api/doctor/appointments/${id}/reschedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date, time }),
+      })
+      if (res.ok) {
+        const r = await fetch("/api/dashboard/doctor")
+        if (r.ok) {
+          const data = await r.json()
+          setStats(data.stats)
+          setTodayList(data.todayList)
+        }
+        toast({ title: "Appointment rescheduled" })
+      } else {
+        toast({ title: "Failed to reschedule", variant: "destructive" })
+      }
+    } catch {
+      toast({ title: "Network error", variant: "destructive" })
     }
   }
 
@@ -188,6 +221,7 @@ export default function DoctorDashboard() {
                     <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => updateAptStatus(apt.id, "Completed")}>
                       Complete
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => rescheduleApt(apt.id)}>Reschedule</Button>
                   </div>
                 </div>
               </div>

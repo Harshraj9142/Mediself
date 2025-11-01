@@ -22,8 +22,18 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const client = (await clientPromise) as MongoClient
     const db = client.db(process.env.MONGODB_DB)
 
-    // No strict access join here; rely on app to only show doctor's patients
-    const result = await db.collection("reminders").updateOne(
+    const reminders = db.collection("reminders")
+    const reminder = await reminders.findOne({ _id: new ObjectId(id) })
+    if (!reminder) return NextResponse.json({ error: "Not found" }, { status: 404 })
+
+    // Enforce doctor-patient relation
+    const rel = await db.collection("doctor_patients").findOne({
+      doctorId: new ObjectId(doctorId),
+      patientId: reminder.patientId,
+    })
+    if (!rel) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+
+    const result = await reminders.updateOne(
       { _id: new ObjectId(id) },
       { $set: { active: body.active, updatedAt: new Date() } }
     )

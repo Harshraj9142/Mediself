@@ -327,6 +327,61 @@ export default function DoctorPatientDetailPage() {
               <CardTitle>Reminders</CardTitle>
             </CardHeader>
             <CardContent>
+              <form
+                className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end mb-4"
+                onSubmit={async (e) => {
+                  e.preventDefault()
+                  const form = e.target as HTMLFormElement
+                  const medicine = (form.querySelector('#d_med') as HTMLInputElement).value.trim()
+                  const dosage = (form.querySelector('#d_dose') as HTMLInputElement).value.trim()
+                  const time = (form.querySelector('#d_time') as HTMLInputElement).value
+                  const date = (form.querySelector('#d_date') as HTMLInputElement).value
+                  const reason = (form.querySelector('#d_reason') as HTMLInputElement).value.trim()
+                  const frequency = (form.querySelector('#d_freq') as HTMLInputElement).value.trim()
+                  if (!medicine || !dosage || !time) return
+                  const res = await fetch('/api/doctor/reminders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patientId, medicine, dosage, time, date: date || undefined, reason: reason || undefined, frequency: frequency || undefined }),
+                  })
+                  if (res.ok) {
+                    ;(form.querySelector('#d_med') as HTMLInputElement).value = ''
+                    ;(form.querySelector('#d_dose') as HTMLInputElement).value = ''
+                    ;(form.querySelector('#d_reason') as HTMLInputElement).value = ''
+                    await refreshSummary()
+                  } else {
+                    alert('Failed to create reminder')
+                  }
+                }}
+              >
+                <div>
+                  <label className="text-sm text-muted-foreground">Medicine</label>
+                  <Input id="d_med" placeholder="e.g. Metformin" />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Dosage</label>
+                  <Input id="d_dose" placeholder="e.g. 500 mg" />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Time</label>
+                  <Input id="d_time" type="time" />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Date (optional)</label>
+                  <Input id="d_date" type="date" />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Frequency</label>
+                  <Input id="d_freq" placeholder="daily" />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Reason</label>
+                  <Input id="d_reason" placeholder="Optional" />
+                </div>
+                <div className="md:col-span-6">
+                  <Button type="submit">Add Reminder</Button>
+                </div>
+              </form>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
