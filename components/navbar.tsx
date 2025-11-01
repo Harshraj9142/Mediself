@@ -6,18 +6,30 @@ import { useTheme } from "next-themes"
 import { Menu, X, Moon, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
+import { useSession } from "next-auth/react"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const { theme, setTheme } = useTheme()
+  const { data: session } = useSession()
+  const role = (session?.user as any)?.role || "patient"
 
-  const navLinks = [
-    { href: "/", label: "Dashboard" },
-    { href: "/appointments", label: "Appointments" },
-    { href: "/medical-records", label: "Medical Records" },
-    { href: "/reminders", label: "Reminders" },
-    { href: "/emergency", label: "Emergency" },
-  ]
+  const navLinks =
+    role === "doctor"
+      ? [
+          { href: "/doctor-portal", label: "Dashboard" },
+          { href: "/doctor-portal/patients", label: "Patients" },
+          { href: "/doctor-portal/appointments", label: "Appointments" },
+          { href: "/doctor-portal/reports", label: "Reports" },
+          { href: "/doctor-portal/settings", label: "Settings" },
+        ]
+      : [
+          { href: "/dashboard", label: "Dashboard" },
+          { href: "/appointments", label: "Appointments" },
+          { href: "/medical-records", label: "Medical Records" },
+          { href: "/reminders", label: "Reminders" },
+          { href: "/emergency", label: "Emergency" },
+        ]
 
   return (
     <nav className="sticky top-0 z-50 bg-gradient-to-r from-white to-blue-50 dark:from-slate-900 dark:to-slate-800 border-b border-border shadow-sm">

@@ -13,6 +13,9 @@ const navItems = [
   { href: "/doctor-portal", label: "Dashboard", icon: LayoutDashboard },
   { href: "/doctor-portal/patients", label: "Patients", icon: Users },
   { href: "/doctor-portal/appointments", label: "Appointments", icon: Calendar },
+  { href: "/doctor-portal/prescriptions", label: "Prescriptions", icon: FileText },
+  { href: "/doctor-portal/labs", label: "Labs", icon: FileText },
+  { href: "/doctor-portal/schedule", label: "Schedule", icon: Calendar },
   { href: "/doctor-portal/reports", label: "Reports", icon: FileText },
   { href: "/doctor-portal/settings", label: "Settings", icon: Settings },
 ]
