@@ -22,31 +22,70 @@ export async function GET() {
 
     const appointmentsCol = db.collection("appointments")
     const relationsCol = db.collection("doctor_patients")
+    const usersCol = db.collection("users")
+    const prescriptionsCol = db.collection("prescriptions")
+    const labsCol = db.collection("labs")
+    const reportsCol = db.collection("reports")
 
     const startOfDay = new Date()
     startOfDay.setHours(0, 0, 0, 0)
     const endOfDay = new Date()
     endOfDay.setHours(23, 59, 59, 999)
 
-    const [totalPatients, todaysAppointments, completedCount, pendingCount, todayList, requests] = await Promise.all([
+    const [
+      // Patients
+      myPatients,
+      totalPatientsInSystem,
+      // Appointments
+      myTodaysAppointments,
+      myCompletedToday,
+      myPendingToday,
+      totalAppointments,
+      myTotalAppointments,
+      // Prescriptions
+      myPrescriptions,
+      myPendingPrescriptions,
+      totalPrescriptions,
+      // Labs
+      myLabs,
+      myUnacknowledgedLabs,
+      totalLabs,
+      // Reports
+      myReports,
+      totalReports,
+      // Lists
+      todayList,
+      requests,
+    ] = await Promise.all([
+      // Patients counts
       relationsCol.countDocuments({ doctorId: new ObjectId(doctorId) }).catch(() => 0),
-      appointmentsCol
-        .countDocuments({ doctorId: new ObjectId(doctorId), date: { $gte: startOfDay, $lte: endOfDay } })
-        .catch(() => 0),
-      appointmentsCol
-        .countDocuments({ doctorId: new ObjectId(doctorId), status: "Completed", date: { $gte: startOfDay, $lte: endOfDay } })
-        .catch(() => 0),
-      appointmentsCol
-        .countDocuments({ doctorId: new ObjectId(doctorId), status: "Pending", date: { $gte: startOfDay, $lte: endOfDay } })
-        .catch(() => 0),
+      usersCol.countDocuments({ role: "patient" }).catch(() => 0),
+      // Appointments counts
+      appointmentsCol.countDocuments({ doctorId: new ObjectId(doctorId), date: { $gte: startOfDay, $lte: endOfDay } }).catch(() => 0),
+      appointmentsCol.countDocuments({ doctorId: new ObjectId(doctorId), status: "Completed", date: { $gte: startOfDay, $lte: endOfDay } }).catch(() => 0),
+      appointmentsCol.countDocuments({ doctorId: new ObjectId(doctorId), status: "Pending", date: { $gte: startOfDay, $lte: endOfDay } }).catch(() => 0),
+      appointmentsCol.countDocuments({}).catch(() => 0),
+      appointmentsCol.countDocuments({ doctorId: new ObjectId(doctorId) }).catch(() => 0),
+      // Prescriptions counts
+      prescriptionsCol.countDocuments({ doctorId: new ObjectId(doctorId) }).catch(() => 0),
+      prescriptionsCol.countDocuments({ doctorId: new ObjectId(doctorId), status: "Pending" }).catch(() => 0),
+      prescriptionsCol.countDocuments({}).catch(() => 0),
+      // Labs counts
+      labsCol.countDocuments({ doctorId: new ObjectId(doctorId) }).catch(() => 0),
+      labsCol.countDocuments({ doctorId: new ObjectId(doctorId), acknowledged: { $ne: true } }).catch(() => 0),
+      labsCol.countDocuments({}).catch(() => 0),
+      // Reports counts
+      reportsCol.countDocuments({ doctorId: new ObjectId(doctorId) }).catch(() => 0),
+      reportsCol.countDocuments({}).catch(() => 0),
+      // Today's appointments list
       appointmentsCol
         .find({ doctorId: new ObjectId(doctorId), date: { $gte: startOfDay, $lte: endOfDay } })
         .sort({ date: 1 })
         .limit(10)
         .toArray()
         .catch(() => [] as any[]),
-      db
-        .collection("requests")
+      // Requests list
+      db.collection("requests")
         .find({ doctorId: new ObjectId(doctorId) })
         .sort({ createdAt: -1 })
         .limit(10)
@@ -56,10 +95,27 @@ export async function GET() {
 
     return NextResponse.json({
       stats: {
-        totalPatients,
-        todaysAppointments,
-        completed: completedCount,
-        pending: pendingCount,
+        // Patients
+        myPatients,
+        totalPatients: totalPatientsInSystem,
+        // Today's appointments
+        todaysAppointments: myTodaysAppointments,
+        completedToday: myCompletedToday,
+        pendingToday: myPendingToday,
+        // All appointments
+        myTotalAppointments,
+        totalAppointments,
+        // Prescriptions
+        myPrescriptions,
+        myPendingPrescriptions,
+        totalPrescriptions,
+        // Labs
+        myLabs,
+        myUnacknowledgedLabs,
+        totalLabs,
+        // Reports
+        myReports,
+        totalReports,
       },
       todayList: todayList.map((a) => ({
         id: String(a._id),
@@ -76,7 +132,23 @@ export async function GET() {
     })
   } catch (e) {
     return NextResponse.json({
-      stats: { totalPatients: 0, todaysAppointments: 0, completed: 0, pending: 0 },
+      stats: {
+        myPatients: 0,
+        totalPatients: 0,
+        todaysAppointments: 0,
+        completedToday: 0,
+        pendingToday: 0,
+        myTotalAppointments: 0,
+        totalAppointments: 0,
+        myPrescriptions: 0,
+        myPendingPrescriptions: 0,
+        totalPrescriptions: 0,
+        myLabs: 0,
+        myUnacknowledgedLabs: 0,
+        totalLabs: 0,
+        myReports: 0,
+        totalReports: 0,
+      },
       todayList: [],
       requests: [],
     })

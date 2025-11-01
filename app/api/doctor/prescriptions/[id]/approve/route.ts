@@ -5,7 +5,8 @@ import clientPromise from "@/lib/mongodb"
 import type { MongoClient } from "mongodb"
 import { ObjectId } from "mongodb"
 
-export async function POST(_: Request, { params }: { params: { id: string } }) {
+export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const role = (session.user as any).role
@@ -22,7 +23,7 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
     const overrides = db.collection("dev_overrides")
     const _id = (() => {
       try {
-        return new ObjectId(params.id)
+        return new ObjectId(id)
       } catch {
         return null
       }
@@ -44,11 +45,11 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
             })
           } catch {}
         }
-        return NextResponse.json({ ok: true, id: params.id, status: "Approved" })
+        return NextResponse.json({ ok: true, id, status: "Approved" })
       }
     }
     await overrides.updateOne(
-      { type: "prescription", doctorId: new ObjectId(doctorId), itemId: params.id },
+      { type: "prescription", doctorId: new ObjectId(doctorId), itemId: id },
       { $set: { status: "Approved", updatedAt: new Date(), approvedComment: comment }, $setOnInsert: { createdAt: new Date() } },
       { upsert: true }
     )
@@ -56,12 +57,12 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
       await db.collection("activities").insertOne({
         userId: new ObjectId(doctorId),
         type: "Prescription",
-        desc: `Approved prescription ${params.id}${comment ? `: ${comment}` : ""}`,
+        desc: `Approved prescription ${id}${comment ? `: ${comment}` : ""}`,
         createdAt: new Date(),
       })
     } catch {}
-    return NextResponse.json({ ok: true, id: params.id, status: "Approved" })
+    return NextResponse.json({ ok: true, id, status: "Approved" })
   } catch {
-    return NextResponse.json({ ok: true, id: params.id, status: "Approved" })
+    return NextResponse.json({ ok: true, id, status: "Approved" })
   }
 }

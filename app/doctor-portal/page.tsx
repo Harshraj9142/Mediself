@@ -10,11 +10,22 @@ import { useToast } from "@/components/ui/use-toast"
 
 export default function DoctorDashboard() {
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState<{ totalPatients: number; todaysAppointments: number; completed: number; pending: number }>({
+  const [stats, setStats] = useState<any>({
+    myPatients: 0,
     totalPatients: 0,
     todaysAppointments: 0,
-    completed: 0,
-    pending: 0,
+    completedToday: 0,
+    pendingToday: 0,
+    myTotalAppointments: 0,
+    totalAppointments: 0,
+    myPrescriptions: 0,
+    myPendingPrescriptions: 0,
+    totalPrescriptions: 0,
+    myLabs: 0,
+    myUnacknowledgedLabs: 0,
+    totalLabs: 0,
+    myReports: 0,
+    totalReports: 0,
   })
   const [todayList, setTodayList] = useState<Array<{ id: string; time: string; patient: string; reason: string; status: string }>>([])
   const [requests, setRequests] = useState<Array<{ patient: string; request: string; date: string; id?: string }>>([])
@@ -136,53 +147,111 @@ export default function DoctorDashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50/30 via-cyan-50/20 to-blue-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">Doctor Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">Welcome back! Here's your practice overview</p>
+      </div>
+
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-700">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-teal-900/20 dark:to-cyan-800/20 border-teal-200 dark:border-teal-700 hover:shadow-lg transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Patients</p>
-                <p className="text-3xl font-bold text-blue-600">{loading ? "-" : stats.totalPatients}</p>
+                <p className="text-xs text-muted-foreground">Total Patients in System</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">{loading ? "-" : stats.totalPatients}</p>
+                <p className="text-xs text-teal-600 dark:text-teal-400 mt-1">My Patients: {stats.myPatients}</p>
               </div>
-              <Users className="w-10 h-10 text-blue-500 opacity-50" />
+              <Users className="w-10 h-10 text-teal-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700">
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-800/20 border-blue-200 dark:border-blue-700 hover:shadow-lg transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Today's Appointments</p>
-                <p className="text-3xl font-bold text-green-600">{loading ? "-" : stats.todaysAppointments}</p>
+                <p className="text-xs text-muted-foreground">Total Appointments</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{loading ? "-" : stats.totalAppointments}</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Mine: {stats.myTotalAppointments}</p>
               </div>
-              <Calendar className="w-10 h-10 text-green-500 opacity-50" />
+              <Calendar className="w-10 h-10 text-blue-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700">
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-900/20 dark:to-teal-800/20 border-emerald-200 dark:border-emerald-700 hover:shadow-lg transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-3xl font-bold text-green-600">{loading ? "-" : stats.completed}</p>
+                <p className="text-xs text-muted-foreground">Today's Appointments</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{loading ? "-" : stats.todaysAppointments}</p>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Completed: {stats.completedToday} | Pending: {stats.pendingToday}</p>
               </div>
-              <CheckCircle className="w-10 h-10 text-green-500 opacity-50" />
+              <CheckCircle className="w-10 h-10 text-emerald-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-700">
+        <Card className="bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-cyan-900/20 dark:to-blue-800/20 border-cyan-200 dark:border-cyan-700 hover:shadow-lg transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-3xl font-bold text-orange-600">{loading ? "-" : stats.pending}</p>
+                <p className="text-xs text-muted-foreground">Total Prescriptions</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">{loading ? "-" : stats.totalPrescriptions}</p>
+                <p className="text-xs text-cyan-600 dark:text-cyan-400 mt-1">Mine: {stats.myPrescriptions} | Pending: {stats.myPendingPrescriptions}</p>
               </div>
-              <Clock className="w-10 h-10 text-orange-500 opacity-50" />
+              <Clock className="w-10 h-10 text-cyan-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card className="bg-gradient-to-br from-purple-50 to-pink-100 dark:from-purple-900/20 dark:to-pink-800/20 border-purple-200 dark:border-purple-700 hover:shadow-lg transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Total Lab Results</p>
+                <p className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{loading ? "-" : stats.totalLabs}</p>
+                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">Mine: {stats.myLabs} | Unacknowledged: {stats.myUnacknowledgedLabs}</p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+                <span className="text-lg">🔬</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-rose-50 to-orange-100 dark:from-rose-900/20 dark:to-orange-800/20 border-rose-200 dark:border-rose-700 hover:shadow-lg transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Total Reports</p>
+                <p className="text-2xl font-bold bg-gradient-to-r from-rose-600 to-orange-600 bg-clip-text text-transparent">{loading ? "-" : stats.totalReports}</p>
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">My Reports: {stats.myReports}</p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-rose-500/20 flex items-center justify-center">
+                <span className="text-lg">📄</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-50 to-yellow-100 dark:from-amber-900/20 dark:to-yellow-800/20 border-amber-200 dark:border-amber-700 hover:shadow-lg transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">System Activity</p>
+                <p className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">{loading ? "-" : "Active"}</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">All systems operational</p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <span className="text-lg">✅</span>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -345,6 +414,7 @@ export default function DoctorDashboard() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }
