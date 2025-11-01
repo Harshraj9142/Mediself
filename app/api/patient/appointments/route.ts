@@ -14,6 +14,9 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const search = (searchParams.get("search") || "").trim().toLowerCase()
+  const status = searchParams.get("status") || "" // Filter by status
+  const fromDate = searchParams.get("fromDate") || "" // Filter from date
+  const toDate = searchParams.get("toDate") || "" // Filter to date
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)))
   const skip = (page - 1) * limit
@@ -26,6 +29,8 @@ export async function GET(req: Request) {
 
     // Build query for patient's appointments
     const query: any = { patientId: new ObjectId(patientId) }
+    
+    // Search filter
     if (search) {
       query.$or = [
         { doctorName: { $regex: search, $options: "i" } },
@@ -33,6 +38,18 @@ export async function GET(req: Request) {
         { status: { $regex: search, $options: "i" } },
         { location: { $regex: search, $options: "i" } },
       ]
+    }
+    
+    // Status filter
+    if (status) {
+      query.status = status
+    }
+    
+    // Date range filter
+    if (fromDate || toDate) {
+      query.date = {}
+      if (fromDate) query.date.$gte = new Date(fromDate)
+      if (toDate) query.date.$lte = new Date(toDate)
     }
 
     // Get total count
@@ -61,24 +78,35 @@ export async function GET(req: Request) {
 
     const items = list.map((a: any) => {
       const doctor = doctorMap.get(String(a.doctorId))
+      const appointmentDate = new Date(a.date)
+      const now = new Date()
+      const isPast = appointmentDate < now
+      const isToday = appointmentDate.toDateString() === now.toDateString()
+      
       return {
         id: String(a._id),
         doctorId: String(a.doctorId),
         doctor: a.doctorName || doctor?.name || doctor?.email || "Doctor",
+        doctorEmail: doctor?.email || "",
         specialty: doctor?.specialty || a.specialty || "General",
         reason: a.reason || "Consultation",
-        date: new Date(a.date).toLocaleDateString(),
-        time: new Date(a.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        date: appointmentDate.toLocaleDateString(),
+        time: appointmentDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         dateTime: a.date,  // ISO string for sorting/filtering
         location: a.location || "Clinic",
         status: a.status || "Pending",
+        isPast: isPast,
+        isToday: isToday,
+        patientName: a.patientName || "",
         createdAt: a.createdAt ? new Date(a.createdAt).toLocaleDateString() : "",
+        updatedAt: a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : "",
       }
     })
 
     return NextResponse.json({ page, limit, total, items })
   } catch (e) {
-    return NextResponse.json({ page: 1, limit: 50, total: 0, items: [] })
+    console.error("Appointments GET error:", e)
+    return NextResponse.json({ page: 1, limit: 50, total: 0, items: [], error: "Failed to load" })
   }
 }
 
@@ -162,8 +190,9 @@ export async function POST(req: Request) {
       })
     } catch {}
 
-    return NextResponse.json({ ok: true, id: String(res.insertedId) })
+    return NextResponse.json({ ok: true, id: String(res.insertedId), message: "Appointment booked successfully" })
   } catch (e) {
-    return NextResponse.json({ error: "Failed to create" }, { status: 500 })
+    console.error("Appointment POST error:", e)
+    return NextResponse.json({ error: "Failed to create", message: String(e) }, { status: 500 })
   }
 }

@@ -167,22 +167,45 @@ export function AppointmentsList() {
       {error && <div className="text-sm text-red-600">{error}</div>}
 
       {!loading && !error && items.map((apt) => (
-        <Card key={apt.id} className="hover:shadow-md transition-shadow">
+        <Card 
+          key={apt.id} 
+          className={
+            apt.status === "Confirmed" 
+              ? "hover:shadow-lg transition-shadow border-l-4 border-l-emerald-500 shadow-md"
+              : apt.status === "Pending"
+              ? "hover:shadow-lg transition-shadow border-l-4 border-l-amber-500 shadow-md"
+              : apt.status === "Completed"
+              ? "hover:shadow-lg transition-shadow border-l-4 border-l-teal-500 shadow-md"
+              : "hover:shadow-lg transition-shadow border-l-4 border-l-gray-400 shadow-md"
+          }
+        >
           <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 space-y-2">
+              <div className="flex items-start gap-3 flex-1">
+                <div className={
+                  apt.status === "Confirmed"
+                    ? "p-3 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 shadow-md flex-shrink-0"
+                    : apt.status === "Pending"
+                    ? "p-3 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 shadow-md flex-shrink-0"
+                    : apt.status === "Completed"
+                    ? "p-3 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 shadow-md flex-shrink-0"
+                    : "p-3 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 shadow-md flex-shrink-0"
+                }>
+                  <Calendar className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <div className="font-semibold text-foreground text-lg">{apt.doctor}</div>
+                  <h3 className="font-semibold text-foreground text-lg">{apt.doctor}</h3>
                   <Badge
                     variant="outline"
                     className={
                       apt.status === "Confirmed"
-                        ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 font-semibold"
                         : apt.status === "Pending"
-                        ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400"
+                        ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 font-semibold"
                         : apt.status === "Completed"
-                        ? "bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-900/30 dark:text-teal-400"
-                        : "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-900/30 dark:text-gray-400"
+                        ? "bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 font-semibold"
+                        : "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-900/30 dark:text-gray-400 font-semibold"
                     }
                   >
                     {apt.status}
@@ -249,28 +272,37 @@ export function AppointmentsList() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => startReschedule(apt)}>
-                  Reschedule
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => startReschedule(apt)}
+                  className="hover:bg-teal-50 dark:hover:bg-teal-950/20"
+                >
+                  📆 Reschedule
                 </Button>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="text-accent-red hover:bg-accent-red/10"
+                  size="sm"
+                  className="text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 dark:text-red-400"
                   onClick={() => remove(apt.id)}
                   aria-label="Delete appointment"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
+              </div>
             </div>
           </CardContent>
         </Card>
       ))}
       {!loading && items.length === 0 && (
-        <Card>
+        <Card className="shadow-lg">
           <CardContent className="py-12 text-center">
             <div className="text-4xl mb-2">📅</div>
-            <div className="text-muted-foreground">No appointments found</div>
+            <div className="text-muted-foreground text-lg font-medium">No appointments found</div>
+            {search && (
+              <p className="text-sm text-muted-foreground mt-2">Try a different search term</p>
+            )}
           </CardContent>
         </Card>
       )}

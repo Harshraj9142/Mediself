@@ -5,35 +5,54 @@ import { ObjectId } from "mongodb"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const role = (session.user as any).role
   if (role !== "patient") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   const patientId = (session.user as any).id as string
 
-  const id = params.id
+  const { id } = await params
   if (!id || !ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 })
 
   try {
     const client = (await clientPromise) as MongoClient
     const db = client.db(process.env.MONGODB_DB)
-    const res = await db.collection("appointments").deleteOne({ _id: new ObjectId(id), patientId: new ObjectId(patientId) })
+    const apts = db.collection("appointments")
+    
+    // Get appointment details before deletion for activity log
+    const apt = await apts.findOne({ _id: new ObjectId(id), patientId: new ObjectId(patientId) })
+    if (!apt) return NextResponse.json({ error: "Not found" }, { status: 404 })
+    
+    const res = await apts.deleteOne({ _id: new ObjectId(id), patientId: new ObjectId(patientId) })
     if (res.deletedCount === 0) return NextResponse.json({ error: "Not found" }, { status: 404 })
-    return NextResponse.json({ ok: true })
+    
+    // Log activity
+    try {
+      const aptDate = new Date(apt.date)
+      await db.collection("activities").insertOne({
+        userId: new ObjectId(patientId),
+        type: "Appointment",
+        desc: `Cancelled appointment with ${apt.doctorName || "doctor"} on ${aptDate.toLocaleDateString()}`,
+        createdAt: new Date(),
+      })
+    } catch {}
+    
+    return NextResponse.json({ ok: true, message: "Appointment cancelled successfully" })
   } catch (e) {
-    return NextResponse.json({ error: "Failed to delete" }, { status: 500 })
+    console.error("Appointment DELETE error:", e)
+    return NextResponse.json({ error: "Failed to delete", message: String(e) }, { status: 500 })
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const role = (session.user as any).role
   if (role !== "patient") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   const patientId = (session.user as any).id as string
 
-  const id = params.id
+  const { id } = await params
   if (!id || !ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 })
 
   let body: any
@@ -72,8 +91,20 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (typeof reason === "string" && reason.trim()) update.reason = reason.trim()
 
     await apts.updateOne({ _id: new ObjectId(id) }, { $set: update })
-    return NextResponse.json({ ok: true })
+    
+    // Log activity
+    try {
+      await db.collection("activities").insertOne({
+        userId: new ObjectId(patientId),
+        type: "Appointment",
+        desc: `Rescheduled appointment with ${current.doctorName || "doctor"} to ${newDate.toLocaleDateString()} ${newDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+        createdAt: new Date(),
+      })
+    } catch {}
+    
+    return NextResponse.json({ ok: true, message: "Appointment rescheduled successfully" })
   } catch (e) {
-    return NextResponse.json({ error: "Failed to update" }, { status: 500 })
+    console.error("Appointment PATCH error:", e)
+    return NextResponse.json({ error: "Failed to update", message: String(e) }, { status: 500 })
   }
 }
