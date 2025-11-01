@@ -89,27 +89,47 @@ export default function SignupPage() {
   return (
     <div className="w-full max-w-md">
       <div className="mb-8 text-center">
-        <div className="flex justify-center mb-4">
-          <Logo />
+        <div className="flex justify-center mb-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full blur-xl opacity-50 animate-pulse" />
+            <div className="relative bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 rounded-full p-4 shadow-2xl">
+              <Logo />
+            </div>
+          </div>
         </div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Create Account</h1>
-        <p className="text-muted-foreground">Join MediSelf today</p>
+        <div className="inline-block px-4 py-2 bg-gradient-to-r from-teal-500/10 via-cyan-500/10 to-blue-500/10 rounded-full border border-teal-200 dark:border-teal-800 mb-4 animate-pulse">
+          <span className="text-sm font-semibold bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">
+            ✨ Join the Healthcare Revolution
+          </span>
+        </div>
+        <h1 className="text-4xl font-bold mb-2">
+          <span className="bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">Create Account</span>
+        </h1>
+        <p className="text-muted-foreground text-lg">Join MediSelf today</p>
       </div>
 
-      <Card className="border-0 shadow-lg">
+      <Card className="border-0 shadow-2xl bg-gradient-to-br from-white/90 to-teal-50/50 dark:from-slate-900/90 dark:to-teal-950/50 backdrop-blur-xl border-2 border-teal-100/50 dark:border-teal-900/50">
         <CardHeader>
           <div className="flex gap-2 mb-4">
             <Button
               variant={userType === "patient" ? "default" : "outline"}
               onClick={() => setUserType("patient")}
-              className="flex-1"
+              className={`flex-1 transition-all duration-300 ${
+                userType === "patient"
+                  ? "bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 hover:from-teal-700 hover:via-cyan-700 hover:to-blue-700 shadow-lg"
+                  : "hover:bg-teal-50 dark:hover:bg-teal-950/20 border-2"
+              }`}
             >
               Patient
             </Button>
             <Button
               variant={userType === "doctor" ? "default" : "outline"}
               onClick={() => setUserType("doctor")}
-              className="flex-1"
+              className={`flex-1 transition-all duration-300 ${
+                userType === "doctor"
+                  ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-lg"
+                  : "hover:bg-blue-50 dark:hover:bg-blue-950/20 border-2"
+              }`}
             >
               Doctor
             </Button>
@@ -170,21 +190,38 @@ export default function SignupPage() {
                 </button>
               </div>
               {/* Password strength indicator */}
-              <div className="flex gap-1 mt-2">
-                {[...Array(4)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={`h-1 flex-1 rounded-full transition-colors ${
-                      i < passwordStrength
-                        ? i < 2
-                          ? "bg-yellow-500"
-                          : i < 3
-                            ? "bg-orange-500"
-                            : "bg-green-500"
-                        : "bg-muted"
-                    }`}
-                  />
-                ))}
+              <div className="space-y-2 mt-2">
+                <div className="flex gap-1">
+                  {[...Array(4)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`h-2 flex-1 rounded-full transition-all duration-300 ${
+                        i < passwordStrength
+                          ? i < 1
+                            ? "bg-gradient-to-r from-red-500 to-orange-500 shadow-sm"
+                            : i < 2
+                              ? "bg-gradient-to-r from-orange-500 to-yellow-500 shadow-sm"
+                              : i < 3
+                                ? "bg-gradient-to-r from-yellow-500 to-lime-500 shadow-sm"
+                                : "bg-gradient-to-r from-emerald-500 to-teal-500 shadow-sm"
+                          : "bg-muted"
+                      }`}
+                    />
+                  ))}
+                </div>
+                {passwordStrength > 0 && (
+                  <p className={`text-xs font-medium ${
+                    passwordStrength < 2
+                      ? "text-red-500"
+                      : passwordStrength < 3
+                        ? "text-yellow-500"
+                        : passwordStrength < 4
+                          ? "text-lime-500"
+                          : "text-emerald-500"
+                  }`}>
+                    {passwordStrength < 2 ? "Weak password" : passwordStrength < 3 ? "Fair password" : passwordStrength < 4 ? "Good password" : "Strong password"}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -211,7 +248,11 @@ export default function SignupPage() {
               </span>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 hover:from-teal-700 hover:via-cyan-700 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-300" 
+              disabled={isLoading}
+            >
               {isLoading ? "Creating account..." : "Create Account"}
             </Button>
           </form>

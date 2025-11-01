@@ -1,6 +1,6 @@
 import { LandingHero } from "@/components/landing-hero"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Heart, Calendar, FileText, Pill, Brain, Shield } from "lucide-react"
+import { Heart, Calendar, FileText, Pill, Brain, Shield, Star, Quote, Award, Users } from "lucide-react"
 
 export default function Home() {
   return (
@@ -84,6 +84,103 @@ export default function Home() {
                     <p className="text-muted-foreground">{feature.desc}</p>
                   </CardContent>
                 </Card>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full border border-blue-200 dark:border-blue-800 mb-4">
+              <span className="text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                ⭐ Trusted by Thousands
+              </span>
+            </div>
+            <h2 className="text-4xl font-bold text-foreground mb-4">What Our Users Say</h2>
+            <p className="text-xl text-muted-foreground">Real stories from real people</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Dr. Sarah Johnson",
+                role: "Cardiologist",
+                content: "MediSelf has revolutionized how I manage my patients. The integrated dashboard saves me hours every week.",
+                rating: 5,
+                color: "from-pink-500 to-rose-500",
+                initial: "SJ"
+              },
+              {
+                name: "Michael Chen",
+                role: "Patient",
+                content: "Finally, a healthcare app that actually works! Booking appointments and tracking my health has never been easier.",
+                rating: 5,
+                color: "from-teal-500 to-cyan-500",
+                initial: "MC"
+              },
+              {
+                name: "Dr. Emily Rodriguez",
+                role: "General Practitioner",
+                content: "The AI assistant is incredible. It helps me provide better care and my patients love the accessibility.",
+                rating: 5,
+                color: "from-blue-500 to-indigo-500",
+                initial: "ER"
+              },
+            ].map((testimonial, i) => (
+              <Card key={i} className="group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border-0 bg-white dark:bg-slate-800 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br opacity-10 group-hover:opacity-20 transition-opacity" style={{ background: `linear-gradient(135deg, ${testimonial.color.split(' ')[1]}, ${testimonial.color.split(' ')[2]})` }} />
+                <CardHeader className="relative">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className={`w-16 h-16 bg-gradient-to-br ${testimonial.color} rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg group-hover:scale-110 transition-transform`}>
+                      {testimonial.initial}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-foreground">{testimonial.name}</div>
+                      <div className="text-sm text-muted-foreground">{testimonial.role}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-1 mb-2">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+                  <Quote className="absolute top-4 right-4 w-8 h-8 text-muted-foreground/20" />
+                </CardHeader>
+                <CardContent className="relative">
+                  <p className="text-muted-foreground italic">"{testimonial.content}"</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Indicators Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 border-y border-border">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            {[
+              { icon: Users, value: "10,000+", label: "Active Users", color: "from-teal-500 to-cyan-500" },
+              { icon: Award, value: "500+", label: "Healthcare Providers", color: "from-blue-500 to-indigo-500" },
+              { icon: Heart, value: "99%", label: "Satisfaction Rate", color: "from-pink-500 to-rose-500" },
+              { icon: Shield, value: "100%", label: "Data Security", color: "from-emerald-500 to-teal-500" },
+            ].map((stat, i) => {
+              const Icon = stat.icon
+              return (
+                <div key={i} className="space-y-3 group hover:scale-110 transition-transform duration-300">
+                  <div className="flex justify-center">
+                    <div className={`w-16 h-16 bg-gradient-to-br ${stat.color} rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow`}>
+                      <Icon className="w-8 h-8 text-white" />
+                    </div>
+                  </div>
+                  <div className={`text-3xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>
+                    {stat.value}
+                  </div>
+                  <div className="text-sm text-muted-foreground font-medium">{stat.label}</div>
+                </div>
               )
             })}
           </div>
