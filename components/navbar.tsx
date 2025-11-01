@@ -28,6 +28,7 @@ export function Navbar() {
           { href: "/appointments", label: "Appointments" },
           { href: "/medical-records", label: "Medical Records" },
           { href: "/reminders", label: "Reminders" },
+          { href: "/profile", label: "Profile" },
           { href: "/emergency", label: "Emergency" },
         ]
 

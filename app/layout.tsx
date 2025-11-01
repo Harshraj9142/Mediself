@@ -9,6 +9,7 @@ import { Navbar } from "@/components/navbar"
 import { AIChatbot } from "@/components/ai-chatbot"
 import { Footer } from "@/components/footer"
 import { AuthSessionProvider } from "@/components/auth-session-provider"
+import { Toaster } from "@/components/ui/toaster"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -36,6 +37,7 @@ export default function RootLayout({
             <Navbar />
             <main className="min-h-screen">{children}</main>
             <Footer />
+            <Toaster />
             <AIChatbot />
           </ThemeProvider>
         </AuthSessionProvider>
