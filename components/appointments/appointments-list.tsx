@@ -4,41 +4,62 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar, Clock, MapPin, Trash2 } from "lucide-react"
+import { useEffect, useState } from "react"
 
-const appointments = [
-  {
-    id: 1,
-    doctor: "Dr. Sarah Johnson",
-    specialty: "Cardiologist",
-    date: "Nov 5, 2025",
-    time: "10:00 AM",
-    location: "City Medical Center",
-    status: "confirmed",
-  },
-  {
-    id: 2,
-    doctor: "Dr. Michael Chen",
-    specialty: "General Practitioner",
-    date: "Nov 12, 2025",
-    time: "2:30 PM",
-    location: "Downtown Clinic",
-    status: "confirmed",
-  },
-  {
-    id: 3,
-    doctor: "Dr. Emily Rodriguez",
-    specialty: "Dermatologist",
-    date: "Nov 20, 2025",
-    time: "3:00 PM",
-    location: "Skin Care Clinic",
-    status: "pending",
-  },
-]
+type Apt = {
+  id: string
+  doctorId: string
+  doctor: string
+  specialty: string
+  date: string
+  time: string
+  location: string
+  status: "confirmed" | "pending" | string
+}
 
 export function AppointmentsList() {
+  const [items, setItems] = useState<Apt[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/patient/appointments")
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data?.error || "Failed to load appointments")
+        setItems([])
+      } else {
+        const data = (await res.json()) as Apt[]
+        setItems(data)
+      }
+    } catch (e) {
+      setError("Network error")
+      setItems([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const remove = async (id: string) => {
+    try {
+      const res = await fetch(`/api/patient/appointments/${id}`, { method: "DELETE" })
+      if (res.ok) setItems((prev) => prev.filter((x) => x.id !== id))
+    } catch {}
+  }
+
+  if (loading) return <div className="text-sm text-muted-foreground">Loading appointments...</div>
+  if (error) return <div className="text-sm text-accent-red">{error}</div>
+
   return (
     <div className="space-y-3">
-      {appointments.map((apt) => (
+      {items.map((apt) => (
         <Card key={apt.id} className="hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between gap-4">
@@ -72,13 +93,20 @@ export function AppointmentsList() {
                   </div>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="text-accent-red hover:bg-accent-red/10">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-accent-red hover:bg-accent-red/10"
+                onClick={() => remove(apt.id)}
+                aria-label="Delete appointment"
+              >
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
           </CardContent>
         </Card>
       ))}
+      {items.length === 0 && <div className="text-sm text-muted-foreground">No appointments found.</div>}
     </div>
   )
 }

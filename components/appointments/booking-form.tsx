@@ -26,15 +26,48 @@ export function BookingForm({ selectedDate, selectedDoctor, onCancel }: BookingF
   const [selectedTime, setSelectedTime] = useState<string>()
   const [reason, setReason] = useState("")
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const parseTimeToDate = (baseDate: Date, time: string) => {
+    const m = time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+    if (!m) return baseDate
+    let hour = parseInt(m[1], 10)
+    const minute = parseInt(m[2], 10)
+    const ampm = m[3].toUpperCase()
+    if (ampm === "PM" && hour !== 12) hour += 12
+    if (ampm === "AM" && hour === 12) hour = 0
+    const d = new Date(baseDate)
+    d.setHours(hour, minute, 0, 0)
+    return d
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (selectedTime && reason) {
-      setIsSubmitted(true)
-      setTimeout(() => {
-        onCancel()
-        setIsSubmitted(false)
-      }, 2000)
+    setError(null)
+    if (!selectedDoctor || !selectedDate || !selectedTime || !reason) return
+    try {
+      setSubmitting(true)
+      const when = parseTimeToDate(selectedDate, selectedTime)
+      const res = await fetch("/api/patient/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ doctorId: selectedDoctor, reason, dateISO: when.toISOString() }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data?.error || "Failed to create appointment")
+      } else {
+        setIsSubmitted(true)
+        setTimeout(() => {
+          onCancel()
+          setIsSubmitted(false)
+        }, 1500)
+      }
+    } catch (err) {
+      setError("Network error")
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -122,14 +155,20 @@ export function BookingForm({ selectedDate, selectedDoctor, onCancel }: BookingF
               Please fill in all fields
             </div>
           )}
+          {error && (
+            <div className="flex items-center gap-2 text-sm text-accent-red">
+              <AlertCircle className="w-4 h-4" />
+              {error}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-3">
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1 bg-transparent">
               Cancel
             </Button>
-            <Button type="submit" disabled={!selectedTime || !reason} className="flex-1">
-              Confirm Booking
+            <Button type="submit" disabled={!selectedTime || !reason || submitting} className="flex-1">
+              {submitting ? "Booking..." : "Confirm Booking"}
             </Button>
           </div>
         </form>

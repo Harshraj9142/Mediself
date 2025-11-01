@@ -3,47 +3,48 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Star } from "lucide-react"
+import { useEffect, useState } from "react"
 
 interface DoctorSelectorProps {
   selectedDoctor?: string
   onDoctorChange: (doctorId: string) => void
 }
 
-const doctors = [
-  {
-    id: "1",
-    name: "Dr. Sarah Johnson",
-    specialty: "Cardiologist",
-    rating: 4.8,
-    availability: "Available",
-  },
-  {
-    id: "2",
-    name: "Dr. Michael Chen",
-    specialty: "General Practitioner",
-    rating: 4.9,
-    availability: "Available",
-  },
-  {
-    id: "3",
-    name: "Dr. Emily Rodriguez",
-    specialty: "Dermatologist",
-    rating: 4.7,
-    availability: "Available",
-  },
-  {
-    id: "4",
-    name: "Dr. James Wilson",
-    specialty: "Orthopedist",
-    rating: 4.6,
-    availability: "Available",
-  },
-]
+type Doc = { id: string; name: string; email?: string; specialty?: string; rating?: number; availability?: string }
 
 export function DoctorSelector({ selectedDoctor, onDoctorChange }: DoctorSelectorProps) {
+  const [docs, setDocs] = useState<Doc[]>([])
+
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      try {
+        const res = await fetch("/api/doctors")
+        if (!res.ok) return
+        const data = (await res.json()) as Array<{ id: string; name: string; email?: string }>
+        if (mounted) {
+          setDocs(
+            data.map((d) => ({
+              id: d.id,
+              name: d.name,
+              email: d.email,
+              specialty: "General",
+              rating: 4.8,
+              availability: "Available",
+            }))
+          )
+        }
+      } catch {}
+    }
+    load()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
   return (
     <div className="space-y-2">
-      {doctors.map((doctor) => (
+      {docs.map((doctor) => (
         <button
           key={doctor.id}
           onClick={() => onDoctorChange(doctor.id)}
@@ -55,14 +56,14 @@ export function DoctorSelector({ selectedDoctor, onDoctorChange }: DoctorSelecto
             <CardContent className="pt-4">
               <div className="space-y-2">
                 <div className="font-semibold text-foreground">{doctor.name}</div>
-                <div className="text-sm text-muted-foreground">{doctor.specialty}</div>
+                <div className="text-sm text-muted-foreground">{doctor.specialty || "General"}</div>
                 <div className="flex items-center justify-between pt-2">
                   <div className="flex items-center gap-1">
                     <Star className="w-4 h-4 fill-accent-yellow text-accent-yellow" />
-                    <span className="text-sm font-medium">{doctor.rating}</span>
+                    <span className="text-sm font-medium">{doctor.rating || 4.8}</span>
                   </div>
                   <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                    {doctor.availability}
+                    {doctor.availability || "Available"}
                   </Badge>
                 </div>
               </div>
@@ -70,6 +71,9 @@ export function DoctorSelector({ selectedDoctor, onDoctorChange }: DoctorSelecto
           </Card>
         </button>
       ))}
+      {docs.length === 0 && (
+        <div className="text-sm text-muted-foreground">No doctors available.</div>
+      )}
     </div>
   )
 }
