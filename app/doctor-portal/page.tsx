@@ -7,6 +7,7 @@ import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
+import { UserProfileCard } from "@/components/dashboard/user-profile-card"
 
 export default function DoctorDashboard() {
   const [loading, setLoading] = useState(true)
@@ -153,6 +154,9 @@ export default function DoctorDashboard() {
         <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">Doctor Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">Welcome back! Here's your practice overview</p>
       </div>
+
+      {/* Profile Section */}
+      <UserProfileCard />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

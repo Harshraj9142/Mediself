@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { TrendingUp, Calendar, Pill, FileText } from "lucide-react"
 import { useEffect, useState } from "react"
+import { UserProfileCard } from "@/components/dashboard/user-profile-card"
 
 const bpData = [
   { time: "Mon", systolic: 120, diastolic: 80 },
@@ -69,6 +70,18 @@ export default function PatientDashboard() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">Patient Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">Welcome back! Here's your health overview</p>
+      </div>
+
+      {/* Profile Card */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <UserProfileCard />
+        </div>
+        <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Quick stats cards here */}
+          </div>
+        </div>
       </div>
 
       {/* Primary Stats */}

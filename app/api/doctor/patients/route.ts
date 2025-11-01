@@ -14,8 +14,12 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const search = (searchParams.get("search") || "").trim().toLowerCase()
+  const gender = searchParams.get("gender") || ""
+  const condition = searchParams.get("condition") || ""
+  const sortBy = searchParams.get("sortBy") || "recent" // recent, name, lastVisit
+  const myPatientsOnly = searchParams.get("myPatientsOnly") === "true"
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
-  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "10", 10)))
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)))
   const skip = (page - 1) * limit
 
   try {
@@ -26,6 +30,19 @@ export async function GET(req: Request) {
     const relations = db.collection("doctor_patients")
     const profiles = db.collection("patient_profiles")
 
+    // If myPatientsOnly, get patient IDs first
+    let allowedPatientIds: ObjectId[] | null = null
+    if (myPatientsOnly) {
+      const myRelations = await relations
+        .find({ doctorId: new ObjectId(doctorId) })
+        .project({ patientId: 1 })
+        .toArray()
+      allowedPatientIds = myRelations.map((r: any) => r.patientId)
+      if (allowedPatientIds.length === 0) {
+        return NextResponse.json({ page, limit, total: 0, items: [] })
+      }
+    }
+
     // Build search query for all patients
     const searchQuery: any = { role: "patient" }
     if (search) {
@@ -34,34 +51,66 @@ export async function GET(req: Request) {
         { email: { $regex: search, $options: "i" } },
       ]
     }
+    if (allowedPatientIds) {
+      searchQuery._id = { $in: allowedPatientIds }
+    }
 
-    // Get total count of all patients matching search
-    const total = await users.countDocuments(searchQuery)
+    // Get patient IDs matching criteria
+    let patientIds = (await users.find(searchQuery).project({ _id: 1 }).toArray()).map((p: any) => p._id)
 
-    // Get paginated list of all patients
+    // Apply profile-based filters (gender, condition)
+    if (gender || condition) {
+      const profileQuery: any = { userId: { $in: patientIds } }
+      if (gender) profileQuery.gender = gender
+      if (condition) profileQuery.conditions = condition
+
+      const matchingProfiles = await profiles.find(profileQuery).project({ userId: 1 }).toArray()
+      const matchingUserIds = matchingProfiles.map((p: any) => p.userId)
+
+      // Also check conditions in relations
+      if (condition) {
+        const relationsWithCondition = await relations
+          .find({ doctorId: new ObjectId(doctorId), conditions: condition, patientId: { $in: patientIds } })
+          .project({ patientId: 1 })
+          .toArray()
+        const relPatientIds = relationsWithCondition.map((r: any) => r.patientId)
+        // Combine both sources
+        patientIds = [...new Set([...matchingUserIds.map(String), ...relPatientIds.map(String)])].map((id) => new ObjectId(id))
+      } else {
+        patientIds = matchingUserIds
+      }
+    }
+
+    const total = patientIds.length
+
+    // Determine sort order
+    let sortField: any = { createdAt: -1 }
+    if (sortBy === "name") sortField = { name: 1 }
+
+    // Get paginated list of patients
     const allPatients = await users
-      .find(searchQuery)
+      .find({ _id: { $in: patientIds } })
       .project({ name: 1, email: 1, createdAt: 1 })
-      .sort({ createdAt: -1 })
+      .sort(sortField)
       .skip(skip)
       .limit(limit)
       .toArray()
 
     // Get relationship data for this doctor with these patients
-    const patientIds = allPatients.map((p: any) => p._id)
+    const currentPagePatientIds = allPatients.map((p: any) => p._id)
     const relationsByPatient = new Map<string, any>()
-    if (patientIds.length > 0) {
+    if (currentPagePatientIds.length > 0) {
       const rels = await relations
-        .find({ doctorId: new ObjectId(doctorId), patientId: { $in: patientIds } })
+        .find({ doctorId: new ObjectId(doctorId), patientId: { $in: currentPagePatientIds } })
         .toArray()
       rels.forEach((r: any) => relationsByPatient.set(String(r.patientId), r))
     }
 
     // Get profile data for conditions
     const profilesByPatient = new Map<string, any>()
-    if (patientIds.length > 0) {
+    if (currentPagePatientIds.length > 0) {
       const patientProfiles = await profiles
-        .find({ userId: { $in: patientIds } })
+        .find({ userId: { $in: currentPagePatientIds } })
         .toArray()
       patientProfiles.forEach((p: any) => profilesByPatient.set(String(p.userId), p))
     }

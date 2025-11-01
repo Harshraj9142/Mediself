@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { RecordVitalsDialog } from "@/components/doctor/record-vitals-dialog"
+import { Activity, FileText, Pill, FlaskConical, Calendar, StickyNote, Bell, User, Clock } from "lucide-react"
 
 export default function DoctorPatientDetailPage() {
   const params = useParams() as { id?: string }
@@ -15,6 +18,10 @@ export default function DoctorPatientDetailPage() {
   const [notes, setNotes] = useState<Array<{ id: string; text: string; createdAt: string | null }>>([])
   const [notesLoading, setNotesLoading] = useState(true)
   const [noteText, setNoteText] = useState("")
+  const [vitals, setVitals] = useState<any[]>([])
+  const [vitalsLoading, setVitalsLoading] = useState(true)
+  const [history, setHistory] = useState<any[]>([])
+  const [historyLoading, setHistoryLoading] = useState(true)
 
   useEffect(() => {
     const load = async () => {
@@ -40,8 +47,38 @@ export default function DoctorPatientDetailPage() {
     }
   }
 
+  const loadVitals = async () => {
+    if (!patientId) return
+    setVitalsLoading(true)
+    try {
+      const res = await fetch(`/api/doctor/patients/${patientId}/vitals?limit=10`, { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setVitals(data.items || [])
+      }
+    } finally {
+      setVitalsLoading(false)
+    }
+  }
+
+  const loadHistory = async () => {
+    if (!patientId) return
+    setHistoryLoading(true)
+    try {
+      const res = await fetch(`/api/doctor/patients/${patientId}/history`, { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setHistory(data.timeline || [])
+      }
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
   useEffect(() => {
     loadNotes()
+    loadVitals()
+    loadHistory()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId])
 
@@ -53,7 +90,18 @@ export default function DoctorPatientDetailPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-indigo-50/20 to-purple-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
+              <User className="w-8 h-8 text-blue-600" />
+              {profile.name || "Patient Details"}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">View and manage patient information</p>
+          </div>
+          <RecordVitalsDialog patientId={patientId} onSuccess={() => { loadVitals(); refreshSummary(); }} />
+        </div>
       <Card>
         <CardHeader>
           <CardTitle>Patient Overview</CardTitle>
@@ -117,14 +165,16 @@ export default function DoctorPatientDetailPage() {
       </Card>
 
       <Tabs defaultValue="activity">
-        <TabsList className="mb-4">
-          <TabsTrigger value="activity">Activity</TabsTrigger>
-          <TabsTrigger value="appointments">Appointments</TabsTrigger>
-          <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
-          <TabsTrigger value="labs">Labs</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-          <TabsTrigger value="reminders">Reminders</TabsTrigger>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
+        <TabsList className="mb-4 flex-wrap">
+          <TabsTrigger value="activity">📋 Activity</TabsTrigger>
+          <TabsTrigger value="vitals">💓 Vitals</TabsTrigger>
+          <TabsTrigger value="history">🕐 Timeline</TabsTrigger>
+          <TabsTrigger value="appointments">📅 Appointments</TabsTrigger>
+          <TabsTrigger value="prescriptions">💊 Prescriptions</TabsTrigger>
+          <TabsTrigger value="labs">🔬 Labs</TabsTrigger>
+          <TabsTrigger value="reports">📄 Reports</TabsTrigger>
+          <TabsTrigger value="reminders">⏰ Reminders</TabsTrigger>
+          <TabsTrigger value="notes">📝 Notes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="activity">
@@ -466,6 +516,7 @@ export default function DoctorPatientDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   )
 }
